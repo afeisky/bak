@@ -6,7 +6,14 @@ Script Name: swd3_patch_repo.py
 Program: chaofei.wu.hz@tcl.com, 2016-04-12
 Info: once push .repo's all files changed.
 
-Usage: swd3_patch_repo.py
+Usage: 
+1: swd3_patch_repo.py
+2: swd3_patch_repo.py -i  or import       # be use on "import" branch 
+
+
+go on:
+
+bug1:  bug number not is in current repo branch version should not be commited. ALM_check.py's bug.
 
 """
 import os
@@ -45,64 +52,91 @@ class _XML():
 		return node.getElementsByTagName(name) if node else []
 
 
-def swd3_repo_patch_push():
+def swd3_repo_patch_push(isImport=False):
+
 	DEBUG=0
 	app_path=os.path.realpath(__file__) 
 	alm_apply_app=app_path.replace("/"+os.path.basename(__file__),"")+"/ALM_check.py"
-
 	alps_path=os.getcwd()
+	log_file_name=alps_path+'/~tmp_repo.log'	
 	gitlist=[]
 	fout=""
-	
-	repo_manifest_xml=".repo/manifest.xml"
-	if not os.path.exists(repo_manifest_xml):
-		print("\033[31m\033[05m" +"Error: "+"\033[0m"+"\033[1;31;40m"+repo_manifest_xml+"\033[0m"+" not found!")
-		exit(1)
-
-	#------.repo/manifest.xml-------------------------
-	XML=_XML()
-	doc = xml.dom.minidom.parse(repo_manifest_xml) 
-	root = doc.documentElement
-	node_key = 'default'
-	nodes = XML.getNode(root,node_key)
-	default_remote = ""
-	default_revision = ""
-	for node in nodes: 
-		default_remote = XML.getAttribute(node,'remote')
-		default_revision = XML.getAttribute(node,'revision')
-		#print(node_key+":"+default_remote+","+default_revision)
-	node_key = 'project'
-	nodes = XML.getNode(root,node_key)
+	default_revision=""
 	project_name = ""
 	project_path = ""
-	for node in nodes: 
-		project_name = XML.getAttribute(node,'name')
-		project_path = XML.getAttribute(node,'path')
-		if project_path=='device':
-			project_device=project_name.replace('/device','')
-		#print(node_key+":"+project_name+","+project_path)
-	#---get repo manifest
-	prj_link = "http://10.92.32.10/gitweb.cgi?p=scm_tools.git;a=blob_plain;f=conf/config";
-	#---
 	
 	user_name = commands.getoutput("git config --list | grep user.name | sed -e 's/.*=//'")
 	user_email = commands.getoutput("git config --list | grep user.email | sed -e 's/.*=//'")
 	print("-------------------------------------------------")
 	print("user_name: "+user_name+"		user_email: "+user_email)
-	print("repo manifest is : \033[31m\033[1m" +default_revision+"     ["+project_device+"]\033[0m")
+		
+	repo_or_lib=-1
+	repo_manifest_xml=".repo/manifest.xml"
+	XML=_XML()
+	nodes=[]
+	if os.path.exists(repo_manifest_xml):
+		repo_or_lib=0
+	else:
+		lines = commands.getoutput("git branch -a | grep '\->' | sed -e 's/.*jgs.//'").split("\n")		
+		if os.path.exists(os.getcwd()+"/.git") and len(lines)==1:
+			repo_or_lib=1
+			log_file_name='/tmp/~tmp_swd3_patch_lib.log'
+	
+	
+	if not(repo_or_lib==0 or repo_or_lib==1):
+		print("\033[31m\033[05m" +"Error: "+"\033[0m"+"\033[1;31;40m"+repo_manifest_xml+"\033[0m"+" not found!")
+		exit(1)
+	
+	if repo_or_lib==0:
+		#------.repo/manifest.xml-------------------------
+		doc = xml.dom.minidom.parse(repo_manifest_xml) 
+		root = doc.documentElement
+		node_key = 'default'
+		nodes = XML.getNode(root,node_key)
+		default_remote = ""
+		default_revision = ""
+		for node in nodes: 
+			default_remote = XML.getAttribute(node,'remote')
+			default_revision = XML.getAttribute(node,'revision')
+			#print(node_key+":"+default_remote+","+default_revision)
+		node_key = 'project'
+		nodes = XML.getNode(root,node_key)
 
+		for node in nodes: 
+			project_name = XML.getAttribute(node,"name")
+			project_path = XML.getAttribute(node,"path")
+			if project_path=='device':
+				project_device=project_name.replace('/device','')
+			#print(node_key+":"+project_name+","+project_path)
+		#---get repo manifest
+		prj_link = "http://10.92.32.10/gitweb.cgi?p=scm_tools.git;a=blob_plain;f=conf/config";
+		#---
+		print("repo manifest is : \033[31m\033[1m" +default_revision+"     ["+project_device+"]\033[0m")
+	elif repo_or_lib==1:
+		default_revision = commands.getoutput("git branch -a | grep '\->' | sed -e 's/.*jgs.//'")
+		project_lib = commands.getoutput("git remote -v | tail -1 | awk -F' ' '{print $2}' | sed -e 's/.*://' -e 's/.git//' -e 's/\//\//g'")
+		project_path=project_lib
+		nodes.append(project_path)
+		print("repo manifest is : \033[31m\033[1m" +default_revision+"     ["+project_path+"]\033[0m")
+	else:
+		print("\033[31m\033[05m" +"Error: "+"\033[0m"+"\033[1;31;40m"+repo_manifest_xml+"\033[0m"+" and git lib not found!")
+		exit(1)
+	#------------
 	gitstatus={}
-
+	
 	alps_path=os.getcwd()
 	#print(os.getcwd())
 	#get all git status file:------------------
 	ch_id='a'
 	n_id=1
 	for node in nodes: 
-		project_path = XML.getAttribute(node,'path')
-		project_lib = XML.getAttribute(node,'name')		
-		os.system("echo -n '.'")
-		os.chdir(alps_path+"/"+project_path)
+		if repo_or_lib==0:
+			project_path = XML.getAttribute(node,"path")  #device
+			project_lib = XML.getAttribute(node,"name")  #sdd3/mtk6735m/device
+			os.system("echo -n '.'")
+			os.chdir(alps_path+"/"+project_path)
+		#elif repo_or_lib==1:			
+	
 		#print(os.getcwd())
 		#path_name = commands.getoutput("git remote -v | tail -1 | awk -F' ' '{print $2}' | sed -e 's/.*://' -e 's/.git//' -e 's/\//.?/g'")
 		start=datetime.datetime.now().microsecond
@@ -116,21 +150,27 @@ def swd3_repo_patch_push():
 			if len(f)>0:
 				if f[0:1]=='"' and f[-1:]=='"' and not f[-2:]=='\\"':
 					f=f[1:-1]
-				one={"ch":ch_id,"id":len(gitlist)+1,"path":project_path,"lib":project_lib,"filename":f,"status":"D","s":0,"do":0,"*":" "}
+				if project_path=="modem" and f[:6]=="build/":
+					continue;
+				one={"ch":ch_id,"id":len(gitlist)+1,"path":project_path,"lib":project_lib,"filename":f,"status":"D","select":0,"do":0,"*":" "}
 				gitlist.append(one)
 		for f in file_m: 
 			#print("---"+f)
 			if len(f)>0 and not f in file_d:
 				if f[0:1]=='"' and f[-1:]=='"' and not f[-2:]=='\\"':
 					f=f[1:-1]
-				one={"ch":ch_id,"id":len(gitlist)+1,"path":project_path,"lib":project_lib,"filename":f,"status":"M","s":0,"do":0,"*":" "}
+				if project_path=="modem" and f[:6]=="build/":
+					continue;
+				one={"ch":ch_id,"id":len(gitlist)+1,"path":project_path,"lib":project_lib,"filename":f,"status":"M","select":0,"do":0,"*":" "}
 				gitlist.append(one)
 		for f in file_a: 
 			#print("---"+f)
 			if len(f)>0:
 				if f[0:1]=='"' and f[-1:]=='"' and not f[-2:]=='\\"':
 					f=f[1:-1]
-				one={"ch":ch_id,"id":len(gitlist)+1,"path":project_path,"lib":project_lib,"filename":f,"status":"A","s":0,"do":0,"*":" "}
+				if project_path=="modem" and f[:6]=="build/":
+					continue;
+				one={"ch":ch_id,"id":len(gitlist)+1,"path":project_path,"lib":project_lib,"filename":f,"status":"A","select":0,"do":0,"*":" "}
 				gitlist.append(one)
 		end=datetime.datetime.now().microsecond
 		#print("%d->%d,	%10d		%10d	%10d	%s"%(start,end,mid-start,end-mid,end-start,project_path))
@@ -143,33 +183,33 @@ def swd3_repo_patch_push():
 	#sort asc:
 	
 	#set git lib --> a,b,c,....z
-	if DEBUG==1:
-		if len(gitlist)>0:
-			ch_id='`'
-			#fout= open(alps_path+'/~tmp_repo.log','w')
-			a=gitlist[0]
-			path="*"
-			for a in gitlist:
-				if a['path']!=path:
-					if ch_id>"z" or ch_id=="":
-						ch_id=""
-					else:
-						ch_id=chr(ord(ch_id)+1)
-					
-					path=a["path"]
-					#print("[%s]:"%(a["path"])) #print(" \033[31;1m%s\033[0m [%s]:"%(ch_id,a["path"]))
-					#fout.write("%c  [%s]:\n"%(ch_id,a["path"]))
-				a["ch"]=ch_id
-				#print("==%s (%s) (%d) [%s] %s    [%s]"%(a['path'],a["ch"],a['id'],a['status'],a['filename'],a['s']))
-				#fout.write("==%s (%s) (%d) [%s] %s    [%s]"%(a["path"],a['ch'],a['id'],a["status"],a['filename'],a["s"]))
-			#fout.close()
+	if len(gitlist)>0:
+		ch_id='`'
+		#fout= open(log_file_name,'w')
+		a=gitlist[0]
+		path="*"
+		for a in gitlist:
+			if a["path"]!=path:
+				if ch_id>"z" or ch_id=="":
+					ch_id=""
+				else:
+					ch_id=chr(ord(ch_id)+1)
+				
+				path=a["path"]
+				#print("[%s]:"%(a["path"])) #print(" \033[31;1m%s\033[0m [%s]:"%(ch_id,a["path"]))
+				#fout.write("%c  [%s]:\n"%(ch_id,a["path"]))
+			a["ch"]=ch_id
+			#print("==%s (%s) (%d) [%s] %s    [%s]"%(a["path"],a["ch"],a['id'],a['status'],a['filename'],a['s']))
+			#fout.write("==%s (%s) (%d) [%s] %s    [%s]"%(a["path"],a['ch'],a['id'],a["status"],a['filename'],a["select"]))
+		#fout.close()
 	#exit(1) #DEBUG=1
 	#----select files:--------------------------------------------
 	isModify=0
 	while True:
 		ch_cur=''
 		n_cur=1
-		fout= open(alps_path+'/~tmp_repo.log','w')
+		fout= open(log_file_name,'w')
+		print("###############################################################")
 		for a in gitlist:
 			error_file=""
 			#check some error.
@@ -178,9 +218,9 @@ def swd3_repo_patch_push():
 			#	error_file=" [ERROR]"
 			if a['ch']!=ch_cur:
 				ch_cur=a['ch']
-				print(" \033[31;1m%c\033[0m [%s]:"%(ch_cur,a['path']))
-				fout.write("%c  [%s]:\n"%(ch_cur,a['path']))
-			if a["s"]==0:
+				print(" \033[31;1m%c\033[0m [%s]:"%(ch_cur,a["path"]))
+				fout.write("%c  [%s]:\n"%(ch_cur,a["path"]))
+			if a["select"]==0:
 				print("\033[31;1m%4d [%s] %s %s\033[0m"%(n_cur,a["status"],a['filename'],error_file))
 				fout.write("%4d  [%s]  %s\n"%(n_cur,a["status"],a['filename']))
 			else:
@@ -199,10 +239,10 @@ def swd3_repo_patch_push():
 			cmdIsOK=0
 			if cmdstr=='*':
 				for a in gitlist:
-					a["s"]=1
+					a["select"]=1
 					#print(a['filename'])
 					cmdIsOK=1
-					isModify=1
+					isModify=1				
 				continue;
 			cmds=cmdstr.split(",")
 			cmdIsOK=0
@@ -212,13 +252,13 @@ def swd3_repo_patch_push():
 					if cmd.isalpha():
 						for a in gitlist:
 							if cmd==a['ch']:
-								a["s"]=1
+								a["select"]=1
 								cmdIsOK=1
 					if cmd.isdigit():
 						for a in gitlist:
-							#print("==%s (%s) (%d) [%s] %s    [%s]"%(a['path'],a['ch'],a['id'],a["status"],a['filename'],a["s"]))			
+							#print("==%s (%s) (%d) [%s] %s    [%s]"%(a["path"],a['ch'],a['id'],a["status"],a['filename'],a["select"]))			
 							if int(cmd)==a['id']:
-								a["s"]=1
+								a["select"]=1
 								#print(a['filename'])
 								cmdIsOK=1
 			if cmdIsOK==0:
@@ -230,7 +270,7 @@ def swd3_repo_patch_push():
 	
 	#-------
 	update_bug_number="0"
-	while True:
+	while True and isImport==0:
 		cmds=raw_input("Bug Number: ").split("\n") #1944552
 		cmd=cmds[0]
 		#if cmd=='q' or cmd=='Q' :
@@ -289,7 +329,7 @@ def swd3_repo_patch_push():
 	list_select.append({"root_case":"Regression","bug_category":"Platform"})
 	list_select.append({"root_case":"Regression","bug_category":"Android"})
 	list_select.append({"root_case":"Regression","bug_category":"3rd Party"})
-	while True:
+	while True and isImport==0:
 		str=""
 		n=1
 		for line in list_select:
@@ -337,72 +377,73 @@ def swd3_repo_patch_push():
 	update_str+="###%%%Bug_Reason:"+update_bug_reason+"\n"
 	update_str+="###%%%author email:"+user_email+"\n"
 
-	print("------------------------------------------")
+	print("###############################################################")
 	fout= open(alps_path+'/~tmp_repo.log','w')
 	ch_cur=''
 	n_cur=1
 	n_sort=1
 	fout.write("-------updated----------------------------\n")
+	update_git_arr=[]
+	update_git_count=[]
+	for g in gitlist:
+		if g['ch']!=ch_cur:
+			ch_cur=g['ch']
+			#print("\033[31;1m %c\033[0m [%s]:"%(ch_cur,g["path"]))
+			#fout.write("%c  [%s]:\n"%(ch_cur,g["path"]))
+			temp_curr_git_file_count=0
+			for a in gitlist:
+				if a["ch"]==ch_cur and a["select"]==1:
+					#print("==%s (%s) (%d) [%s] %s    [%s][%s]"%(a["path"],a["ch"],a['id'],a["status"],a['filename'],a["select"],a["do"]))					
+					temp_curr_git_file_count+=1
+			if temp_curr_git_file_count>0:
+				#print(g["path"])
+				update_git_arr.append(g["path"])
+				update_git_count.append(temp_curr_git_file_count)
+
+	ch_cur='`'
+	n_count=0
 	for a in gitlist:
 		if a['ch']!=ch_cur:
 			ch_cur=a['ch']
-			print("\033[31;1m %c\033[0m [%s]:"%(ch_cur,a['path']))
-			fout.write("%c  [%s]:\n"%(ch_cur,a['path']))
-		if a["s"]==1:
+			n_count=0
+			i=0
+			for s in update_git_arr:
+				if a["path"]==s:
+					print(" %s:"%(update_git_arr[i]))
+					fout.write(" %s:"%(update_git_arr[i]))
+					break;
+				i+=1
+		if a["select"]==1:
 			if a["status"]=='D':
-				os.chdir(alps_path+"/"+a['path'])
-				#print("%s, "%(os.getcwd()))	
-				commands.getoutput("git rm '%s'"%(a['filename']))
-				a["do"]=1
-				#a['*']="*"
-				print("\033[31;1m%4d%s [%s] %s\033[0m"%(n_sort,a['*'],a["status"],a['filename']))
-				fout.write("%4d%s [%s]  %s\n"%(n_sort,a['*'],a["status"],a['filename']))
-				n_sort=n_sort+1
-			elif a["status"]=='A' or a["status"]=='M':
-				os.chdir(alps_path+"/"+a['path'])
+				#os.chdir(alps_path+"/"+a["path"])
 				#print("%s, "%(os.getcwd()))
-				commands.getoutput("git add '%s'"%(a['filename']))
 				a["do"]=1
 				#a['*']="*"
-				print("\033[31;1m%4d%s [%s] %s\033[0m"%(n_sort,a['*'],a["status"],a['filename']))
-				fout.write("%4d%s [%s]  %s\n"%(n_sort,a['*'],a["status"],a['filename']))
-				n_sort=n_sort+1
+				n_count=n_count+1
+				print("\033[31;1m%4d%s [%s] %s\033[0m"%(n_count,a['*'],a["status"],a['filename']))
+				fout.write("%4d%s [%s]  %s\n"%(n_count,a['*'],a["status"],a['filename']))				
+			elif a["status"]=='A' or a["status"]=='M':
+				#os.chdir(alps_path+"/"+a["path"])
+				#print("%s, "%(os.getcwd()))
+				a["do"]=1
+				#a['*']="*"
+				n_count=n_count+1
+				print("\033[31;1m%4d%s [%s] %s\033[0m"%(n_count,a['*'],a["status"],a['filename']))
+				fout.write("%4d%s [%s]  %s\n"%(n_count,a['*'],a["status"],a['filename']))
 			elif a["status"]=='R':
 				print("\033[31;1mERROR! ---[R] %s, %s\033[0m"%(os.getcwd(),a['filename']))
-				fout.write("ERROR! %4d  [%s]  %s\n"%(n_cur,a["status"],a['filename']))
+				fout.write("ERROR! %4d --[R] [%s]  %s\n"%(n_count,a["status"],a['filename']))
 			#else:
-			#	print("\033[31;1mERROR!\033[0m  %4d [%s] %s"%(n_cur,a["status"],a['filename']))
-			#	fout.write("ERROR! %4d  [%s]  %s\n"%(n_cur,a["status"],a['filename']))
+			#	n_count=n_count+1
+			#	print("\033[31;1mERROR!\033[0m  %4d [%s] %s"%(n_count,a["status"],a['filename']))
+			#	fout.write("ERROR! %4d  [%s]  %s\n"%(n_count,a["status"],a['filename']))
 		#else:
 		#	print("  \033[31;1m%4d\033[0m%s \033[31;05m[%s] %s\033[0m"%(n_cur,a['*'],a["status"],a['filename']))
 		#	fout.write("%4d  [%s]  %s\n"%(n_cur,a["status"],a['filename']))
-		n_cur=n_cur+1
 	#print more:
 	
 	
-	#----------commit & push-----------------------------------------------
-	ch_cur='A'
-	n_cur=1
-	n_sort=1
-	for a in gitlist:
-		if a['ch']!=ch_cur:
-			ch_cur=a['ch']
-			flag_need_commit=0
-			for b in gitlist:
-				if b["ch"]==ch_cur and b["do"]==1:
-					#print("==%s (%s) (%d) [%s] %s    [%s][%s]"%(b['path'],b["ch"],b['id'],b["status"],b['filename'],b["s"],b["do"]))
-					flag_need_commit=1
-					break;
-			if flag_need_commit==1:
-				os.chdir(alps_path+"/"+a['path'])
-				str_commit="git commit -m '%s'"%(update_str)
-				#print(str_commit)
-				commands.getoutput(str_commit)
-				str_push="git push ssh://%s@10.92.32.10:29418/%s HEAD:refs/for/%s"%(user_name,a["lib"],default_revision)
-				print("----------------------------")
-				print(str_push)
-				#git push ssh://chaofei.wu@10.92.32.10:29418/sdd3/mtk6735/build HEAD:refs/for/pixi45-ct-v4.0-dint
-				print(commands.getoutput(str_push))
+	
 
 	fout.write("-------modified, but not update---------------\n")
 	ch_cur='A'
@@ -411,8 +452,8 @@ def swd3_repo_patch_push():
 	for a in gitlist:
 		if a['ch']!=ch_cur:
 			ch_cur=a['ch']
-			fout.write("%c  [%s]:\n"%(ch_cur,a['path']))
-		if a["s"]==1:				
+			fout.write("%c  [%s]:\n"%(ch_cur,a["path"]))
+		if a["select"]==1:				
 			if a["status"]=='D':
 				a=""
 			elif a["status"]=='A' or a["status"]=='M':
@@ -427,24 +468,101 @@ def swd3_repo_patch_push():
 			fout.write("%4d  [%s]  %s\n"%(n_sort,a["status"],a['filename']))
 			n_sort=n_sort+1
 		n_cur=n_cur+1
+
+	fout.write("\n\n---------------------------------------------\n")
+	
+	#ch_cur='`'
+	#update_git_arr=[]
+	#for a in gitlist:
+		#if a['ch']!=ch_cur:
+			#ch_cur=a['ch']
+			#temp_curr_git_file_count=0
+			#for b in gitlist:
+				#if b["ch"]==ch_cur and b["do"]==1:
+					##print("==%s (%s) (%d) [%s] %s    [%s][%s]"%(b["path"],b["ch"],b['id'],b["status"],b['filename'],b["select"],b["do"]))					
+					#temp_curr_git_file_count+=1
+			#if temp_curr_git_file_count>0:
+				#update_git_arr.append({"path":a["path"],"count":temp_curr_git_file_count})
+	fout.close()
+	#----------commit & push-----------------------------------------------	
+	print("---------------------------------------------------------------")
+	while True:
+		cmds=raw_input("\033[31;1mConfirm update these files\033[0m: [yes/no]:").split("\n")
+		cmd=cmds[0]
+		if cmd=="yes":
+			break;
+		elif cmd=="no":	
+			exit(1)
+
+	if isImport==1:
+		update_str=update_patch_comments
 		
-	ch_cur='A'
+	#do:git add/rm . & git commit -m ..& git push .
+	fout= open(alps_path+'/~tmp_repo.log','w+')
+	ch_cur='`'
 	n_cur=1
 	n_sort=1
-	fout.write("\n\n---------------------------------------------\n")
+	for k in gitlist:
+		if k['ch']!=ch_cur:
+			ch_cur=k['ch']
+			flag_need_commit=0
+			for a in gitlist:
+				if a["select"]==1 and a["ch"]==ch_cur:
+					if a["status"]=='D':
+						os.chdir(alps_path+"/"+a["path"])
+						#print("%s, "%(os.getcwd()))
+						commands.getoutput("git rm '%s'"%(a['filename']))
+						a["do"]=1
+						#print("\033[31;1m%4d%s [%s] %s\033[0m"%(n_sort,a['*'],a["status"],a['filename']))
+						#fout.write("%4d%s [%s]  %s\n"%(n_sort,a['*'],a["status"],a['filename']))
+						flag_need_commit=flag_need_commit+1
+					elif a["status"]=='A' or a["status"]=='M':
+						os.chdir(alps_path+"/"+a["path"])
+						#print("%s, "%(os.getcwd()))
+						commands.getoutput("git add '%s'"%(a['filename']))
+						a["do"]=1
+						#print("\033[31;1m%4d%s [%s] %s\033[0m"%(n_sort,a['*'],a["status"],a['filename']))
+						#fout.write("%4d%s [%s]  %s\n"%(n_sort,a['*'],a["status"],a['filename']))
+						flag_need_commit=flag_need_commit+1
+					#elif a["status"]=='R':
+						#print("\033[31;1mERROR! ---[R] %s, %s\033[0m"%(os.getcwd(),a['filename']))
+						#fout.write("ERROR! %4d  [%s]  %s\n"%(n_cur,a["status"],a['filename']))
+			if flag_need_commit>0:
+				os.chdir(alps_path+"/"+k["path"])
+				str_commit="git commit -m '%s'"%(update_str)
+				#print(str_commit)
+				commands.getoutput(str_commit)
+				str_push="git push ssh://%s@10.92.32.10:29418/%s HEAD:refs/for/%s"%(user_name,k["lib"],default_revision)
+				print("----------------------------")
+				print(str_push)
+				#git push ssh://chaofei.wu@10.92.32.10:29418/sdd3/mtk6735/build HEAD:refs/for/pixi45-ct-v4.0-dint
+				print(commands.getoutput(str_push))
+	#view git status
 	for a in gitlist:
 		if a['ch']!=ch_cur:
 			ch_cur=a['ch']
-			fout.write("\n\n--------%s--------------------------------\n"%(a['path']))
-			os.chdir(alps_path+"/"+a['path'])
+			fout.write("\n\n--------%s--------------------------------\n"%(a["path"]))
+			os.chdir(alps_path+"/"+a["path"])
 			fout.write(commands.getoutput("git status")+'\n')
 	fout.close()
-
+	print("----------Done!-----------------------------------")
 
 #-------------------------------------------
 
 if __name__ == "__main__":
-	swd3_repo_patch_push()
+	try:
+		argvs = sys.argv[1:]
+		if len(argvs) < 1:
+			swd3_repo_patch_push(False)
+		else:
+			if 'import' in argvs or '-i' in argvs:
+				swd3_repo_patch_push(True)
+	except:
+		print("")
+		exit(1)
+
+        
+	
 
 
 
