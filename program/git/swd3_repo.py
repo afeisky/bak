@@ -29,17 +29,6 @@ from time import *
 from xml.dom.minidom import parse 
 import xml.dom.minidom 
 
-#    os.system("ls")  
-#    p = Popen("cp -rf a/* b/", shell=True, stdout=PIPE, stderr=PIPE)
-#    p.wait()
-#    if p.returncode != 0:
-#        print "Error."
-#        return -1
-#    status, output = commands.getstatusoutput("ls")
-#    output = commands.getoutput("ls")
-#    status = commands.getstatus("ls")
-
-
 
 class _XML():
 	def getAttribute(self,node, attrname):
@@ -378,7 +367,7 @@ def swd3_repo_patch_push(isImport=False):
 	update_str+="###%%%author email:"+user_email+"\n"
 
 	print("###############################################################")
-	fout= open(alps_path+'/~tmp_repo.log','w')
+	fout= open(log_file_name,'w')
 	ch_cur=''
 	n_cur=1
 	n_sort=1
@@ -498,7 +487,7 @@ def swd3_repo_patch_push(isImport=False):
 		update_str=update_patch_comments
 		
 	#do:git add/rm . & git commit -m ..& git push .
-	fout= open(alps_path+'/~tmp_repo.log','w+')
+	fout= open(log_file_name,'w+')
 	ch_cur='`'
 	n_cur=1
 	n_sort=1
@@ -509,7 +498,8 @@ def swd3_repo_patch_push(isImport=False):
 			for a in gitlist:
 				if a["select"]==1 and a["ch"]==ch_cur:
 					if a["status"]=='D':
-						os.chdir(alps_path+"/"+a["path"])
+						if repo_or_lib==0:
+							os.chdir(alps_path+"/"+a["path"])
 						#print("%s, "%(os.getcwd()))
 						commands.getoutput("git rm '%s'"%(a['filename']))
 						a["do"]=1
@@ -517,7 +507,8 @@ def swd3_repo_patch_push(isImport=False):
 						#fout.write("%4d%s [%s]  %s\n"%(n_sort,a['*'],a["status"],a['filename']))
 						flag_need_commit=flag_need_commit+1
 					elif a["status"]=='A' or a["status"]=='M':
-						os.chdir(alps_path+"/"+a["path"])
+						if repo_or_lib==0:
+							os.chdir(alps_path+"/"+a["path"])
 						#print("%s, "%(os.getcwd()))
 						commands.getoutput("git add '%s'"%(a['filename']))
 						a["do"]=1
@@ -528,7 +519,8 @@ def swd3_repo_patch_push(isImport=False):
 						#print("\033[31;1mERROR! ---[R] %s, %s\033[0m"%(os.getcwd(),a['filename']))
 						#fout.write("ERROR! %4d  [%s]  %s\n"%(n_cur,a["status"],a['filename']))
 			if flag_need_commit>0:
-				os.chdir(alps_path+"/"+k["path"])
+				if repo_or_lib==0:
+					os.chdir(alps_path+"/"+k["path"])
 				str_commit="git commit -m '%s'"%(update_str)
 				#print(str_commit)
 				commands.getoutput(str_commit)
@@ -542,7 +534,8 @@ def swd3_repo_patch_push(isImport=False):
 		if a['ch']!=ch_cur:
 			ch_cur=a['ch']
 			fout.write("\n\n--------%s--------------------------------\n"%(a["path"]))
-			os.chdir(alps_path+"/"+a["path"])
+			if repo_or_lib==0:
+				os.chdir(alps_path+"/"+a["path"])
 			fout.write(commands.getoutput("git status")+'\n')
 	fout.close()
 	print("----------Done!-----------------------------------")
@@ -550,16 +543,16 @@ def swd3_repo_patch_push(isImport=False):
 #-------------------------------------------
 
 if __name__ == "__main__":
-	try:
+	#try:
 		argvs = sys.argv[1:]
 		if len(argvs) < 1:
 			swd3_repo_patch_push(False)
 		else:
 			if 'import' in argvs or '-i' in argvs:
 				swd3_repo_patch_push(True)
-	except:
-		print("")
-		exit(1)
+	#except:
+	#	print("")
+	#	exit(1)
 
         
 	
