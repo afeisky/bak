@@ -7,6 +7,7 @@ import time
 import urllib
 import urllib2
 import sqlite3
+import threading  
 #import pygtk
 import tempfile
 #pygtk.require('2.0')
@@ -28,13 +29,13 @@ class XML():
 	def getNode(self,node,name):
 		return node.getElementsByTagName(name) if node else []
 
-	def getNodeValue1(self,node1):
+	def getNodeValue1(self,node,node1):
 		return self.getNodeValue(self.getNode(node,node1)[0])
 		
-	def getNodeValue2(self,node1,node2):
+	def getNodeValue2(self,node,node1,node2):
 		return self.getNodeValue(self.getNode(self.getNode(node,node1)[0],node2)[0])
 
-	def getNodeValue3(self,node1,node2,node3):
+	def getNodeValue3(self,node,node1,node2,node3):
 		return self.getNodeValue(self.getNode(self.getNode(self.getNode(node,node1)[0],node2)[0],node3)[0])
 
 class DB():
@@ -55,6 +56,7 @@ class DB():
 			if cursor is not None:
 				cursor.close()
 
+	COUNT=0
 	def get_cursor(self,conn):
 		if conn is not None:
 			return conn.cursor()
@@ -136,6 +138,7 @@ SQL=\
             <sch:QueryDefinition>(field[Assigned User] ="chaofei.wu","wenhui.xu","lang.feng")</sch:QueryDefinition>
          </arg0>
       </int:getItemsByCustomQuery>
+	COUNT=0
    </soapenv:Body>
 </soapenv:Envelope>
 '''
@@ -290,25 +293,11 @@ def get_summary(response):
 	if m:
 		return m.group(1)
 	return 'Get Summary Error!!!'
-	
-doc = xml.dom.minidom.parse("alm.xml") 
-root = doc.documentElement
-node_key = 'return'
-nodes = XML().getNode(root,node_key)
-print("len=%d"%(len(nodes)))
-item_id = ""
-
-COUNT=0
 
 
 class _ALM():
 
-	def getNodeitem(self,node):
-		global COUNT
-		if (COUNT>1000):
-			return
-		COUNT+=1
-		
+	def getNodeitem(self,node):	
 		for sub in node.childNodes:
 			#if sub.nodeType == sub.ELEMENT_NODE:
 			print sub.nodeName
@@ -337,63 +326,84 @@ class _ALM():
 				itemName=XML().getAttribute(node,'Name')
 				if itemName=="Summary":
 					#Summary=XML().getNodeValue(XML().getNode(XML().getNode(node,"ns1:shorttext")[0],"ns1:value")[0])
-					Summary=XML().getNodeValue2("ns1:shorttext","ns1:value").replace("'","")
+					Summary=XML().getNodeValue2(node,"ns1:shorttext","ns1:value").replace("'","")
 					#print("Summary="+Summary)
 				elif itemName=="Type":
 					#Type=XML().getNodeValue(XML().getNode(XML().getNode(node,"ns1:shorttext")[0],"ns1:value")[0])
 					Type=XML().getNodeValue(XML().getNode(node,"ns1:type")[0]).replace("'","")
 					#print("Type="+Type)
 				elif itemName=="Assigned User":
-					Assigned_User=XML().getNodeValue3("ns1:UserRecord","ns1:email","ns1:value").replace("'","")
+					Assigned_User=XML().getNodeValue3(node,"ns1:UserRecord","ns1:email","ns1:value").replace("'","")
 					#print("Assigned User="+Assigned_User)
 				elif itemName=="State":
-					State=XML().getNodeValue1("ns1:state").replace("'","")
+					State=XML().getNodeValue1(node,"ns1:state").replace("'","")
 					#print("State="+State)
 				elif itemName=="Project":
-					Project=XML().getNodeValue2("ns1:project","ns1:value").replace("'","")
+					Project=XML().getNodeValue2(node,"ns1:project","ns1:value").replace("'","")
 					#print("Project="+Project)
 		return {"itemid":itemID,"summary":Summary,"type":Type,"assigned_user":Assigned_User,"state":State,"project":Project}
 
 
-print("-------------------")
-ALM=_ALM()
-return_node=ALM.getNodeitem(root)
-print(return_node)
-if not return_node==None:
-	nodes=XML().getNode(root,"ns1:Item")
-	conn=DB().get_conn("swd3_alm.sqlite3")
-	if not DB().exist(conn,"alm"):
-		DB().execute(conn,"create table alm (alm_id integer primary key,summary varchar(100),type text varchar(20),assigned_user varchar(30),state varchar(20),project varchar(60),time varchar(19))")
-	
-	if not DB().exist(conn,"alm"):
-		print("Error! not found table:alm")
-		exit(1)
 
-	for node in return_node.childNodes:
-		if node.nodeType == node.ELEMENT_NODE:
-			print("%s->[%s]"%(return_node.nodeName,node.nodeName))
+def main():
 			
-			line=ALM.parseItem(node)
-			print(line)
-			if (DB().record_count(conn,"select * from alm where alm_id='%s'"%(line['itemid']))):
-				#update_sql = "UPDATE alm SET name = ? WHERE alm_id ='%s'"%(line['itemid'])
-				#data = [('id', index),
-						#('alm_id', itemID),
-						#('type', self.Type),
-						#('assigned_user', self.Assigned_User)]
-				#DB().update(conn, update_sql, data)
-				sql="update alm set alm_id='%s',summary='%s',type='%s',assigned_user='%s',state='%s',project='%s',time='%s' WHERE alm_id ='"+line['itemid']+"'"
-			else:
-				sql="insert into alm values ('%s','%s','%s','%s','%s','%s','%s')"
-			timeNow=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) 
-			DB().execute(conn,sql%(line['itemid'],line['summary'],line['type'],line['assigned_user'],line['state'],line['project'],timeNow))
-			conn.commit()
-	cur=DB().get_cursor(conn)
-	cur.execute("select * from alm")
-	for item in cur.fetchall():
-		for element in item:
-			print element,
-		print
+	doc = xml.dom.minidom.parse("alm.xml") 
+	root = doc.documentElement
+	node_key = 'return'
+	nodes = XML().getNode(root,node_key)
+	print("len=%d"%(len(nodes)))
+	item_id = ""
 
-			
-print("-------done!---------")
+	COUNT=0
+
+	ALM=_ALM()
+	return_node=ALM.getNodeitem(root)
+	print(return_node)
+	if not return_node==None:
+		nodes=XML().getNode(root,"ns1:Item")
+		conn=DB().get_conn("swd3_alm.sqlite3")
+		if not DB().exist(conn,"alm"):
+			DB().execute(conn,"create table alm (alm_id integer primary key,summary varchar(100),type text varchar(20),assigned_user varchar(30),state varchar(20),project varchar(60),time varchar(19))")
+		
+		if not DB().exist(conn,"alm"):
+			print("Error! not found table:alm")
+			exit(1)
+
+		for node in return_node.childNodes:
+			if node.nodeType == node.ELEMENT_NODE:
+				print("%s->[%s]"%(return_node.nodeName,node.nodeName))
+				
+				line=ALM.parseItem(node)
+				print(line)
+				timeNow=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) 
+				if (DB().record_count(conn,"select * from alm where alm_id='%s'"%(line['itemid']))):
+					#update_sql = "UPDATE alm SET name = ? WHERE alm_id ='%s'"%(line['itemid'])
+					#data = [('id', index),
+							#('alm_id', itemID),
+							#('type', self.Type),
+							#('assigned_user', self.Assigned_User)]
+					#DB().update(conn, update_sql, data)
+					sql="update alm set alm_id='%s',summary='%s',type='%s',assigned_user='%s',state='%s',project='%s' WHERE alm_id ='"+line['itemid']+"'"
+					DB().execute(conn,sql%(line['itemid'],line['summary'],line['type'],line['assigned_user'],line['state'],line['project']))
+				else:
+					sql="insert into alm values ('%s','%s','%s','%s','%s','%s','%s')"
+					DB().execute(conn,sql%(line['itemid'],line['summary'],line['type'],line['assigned_user'],line['state'],line['project'],timeNow))
+				conn.commit()
+		cur=DB().get_cursor(conn)
+		cur.execute("select * from alm")
+		for item in cur.fetchall():
+			for element in item:
+				print element,
+			print
+	timeNow=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+	os.system("echo '%s' >> alm_log.log"%(timeNow))
+	main_timer()
+
+def main_timer():
+	t = threading.Timer(3600.0, main)
+	t.start()
+
+if __name__ == "__main__":
+	main()
+	main_timer()
+	print("-------done!---------")
