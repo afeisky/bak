@@ -3,6 +3,7 @@
 import sys
 import os
 import re
+import time
 import urllib
 import urllib2
 import sqlite3
@@ -27,6 +28,9 @@ class XML():
 	def getNode(self,node,name):
 		return node.getElementsByTagName(name) if node else []
 
+	def getNodeValue1(self,node1):
+		return self.getNodeValue(self.getNode(node,node1)[0])
+		
 	def getNodeValue2(self,node1,node2):
 		return self.getNodeValue(self.getNode(self.getNode(node,node1)[0],node2)[0])
 
@@ -55,7 +59,7 @@ class DB():
 		if conn is not None:
 			return conn.cursor()
 		else:
-			return get_conn('').cursor()
+			return self.get_conn('').cursor()
 
 	def exist(self,conn,tableName):
 		cur=self.get_cursor(conn)
@@ -93,7 +97,7 @@ class DB():
 			print('the %s is empty or equal None!'%(sql))
 #-----------------------------
 class _CONN():
-	conn=DB().get_conn("swd3_alm.sqlite3"):
+	conn=DB().get_conn("swd3_alm.sqlite3")
 	def execute(self,sql):
 		if sql is not None and sql != '':
 			if SHOW_SQL:
@@ -127,7 +131,8 @@ SQL=\
    	       <sch:InputField>Assigned User</sch:InputField>
    	       <sch:InputField>Reporter Department</sch:InputField>
    	       <sch:InputField>Assignee Department</sch:InputField>
-   	       <sch:InputField>Deadline Set Date</sch:InputField>
+   	       <sch:InputField>Deadline</sch:InputField>
+	       <sch:InputField>State</sch:InputField>    
             <sch:QueryDefinition>(field[Assigned User] ="chaofei.wu","wenhui.xu","lang.feng")</sch:QueryDefinition>
          </arg0>
       </int:getItemsByCustomQuery>
@@ -324,22 +329,30 @@ class _ALM():
 		Summary=""
 		Type=""
 		Assigned_User=""
+		State=""
+		Project=""
 		for node in parentNodes:
 			if node.nodeType == parentNode.ELEMENT_NODE:
 				#print("   %s->[%s]"%(node.nodeName,node.nodeName))
 				itemName=XML().getAttribute(node,'Name')
 				if itemName=="Summary":
 					#Summary=XML().getNodeValue(XML().getNode(XML().getNode(node,"ns1:shorttext")[0],"ns1:value")[0])
-					Summary=XML().getNodeValue2("ns1:shorttext","ns1:value")
+					Summary=XML().getNodeValue2("ns1:shorttext","ns1:value").replace("'","")
 					#print("Summary="+Summary)
 				elif itemName=="Type":
 					#Type=XML().getNodeValue(XML().getNode(XML().getNode(node,"ns1:shorttext")[0],"ns1:value")[0])
-					Type=XML().getNodeValue(XML().getNode(node,"ns1:type")[0])
+					Type=XML().getNodeValue(XML().getNode(node,"ns1:type")[0]).replace("'","")
 					#print("Type="+Type)
 				elif itemName=="Assigned User":
-					Assigned_User=XML().getNodeValue3("ns1:UserRecord","ns1:email","ns1:value")
+					Assigned_User=XML().getNodeValue3("ns1:UserRecord","ns1:email","ns1:value").replace("'","")
 					#print("Assigned User="+Assigned_User)
-		return {"itemid":itemID,"summary":Summary,"type":Type,"assigned_user":Assigned_User}
+				elif itemName=="State":
+					State=XML().getNodeValue1("ns1:state").replace("'","")
+					#print("State="+State)
+				elif itemName=="Project":
+					Project=XML().getNodeValue2("ns1:project","ns1:value").replace("'","")
+					#print("Project="+Project)
+		return {"itemid":itemID,"summary":Summary,"type":Type,"assigned_user":Assigned_User,"state":State,"project":Project}
 
 
 print("-------------------")
@@ -349,8 +362,13 @@ print(return_node)
 if not return_node==None:
 	nodes=XML().getNode(root,"ns1:Item")
 	conn=DB().get_conn("swd3_alm.sqlite3")
-	if DB().exist(conn,"alm1"):
-		DB().execute(conn,"create table alm (alm_id integer primary key,summary varchar(100),type text varchar(20),assigned_user varchar(30))")
+	if not DB().exist(conn,"alm"):
+		DB().execute(conn,"create table alm (alm_id integer primary key,summary varchar(100),type text varchar(20),assigned_user varchar(30),state varchar(20),project varchar(60),time varchar(19))")
+	
+	if not DB().exist(conn,"alm"):
+		print("Error! not found table:alm")
+		exit(1)
+
 	for node in return_node.childNodes:
 		if node.nodeType == node.ELEMENT_NODE:
 			print("%s->[%s]"%(return_node.nodeName,node.nodeName))
@@ -364,10 +382,11 @@ if not return_node==None:
 						#('type', self.Type),
 						#('assigned_user', self.Assigned_User)]
 				#DB().update(conn, update_sql, data)
-				sql="update alm set alm_id='%s',summary='%s',type='%s',assigned_user='%s' WHERE alm_id ='"+line['itemid']+"'"
+				sql="update alm set alm_id='%s',summary='%s',type='%s',assigned_user='%s',state='%s',project='%s',time='%s' WHERE alm_id ='"+line['itemid']+"'"
 			else:
-				sql="insert into alm values ('%s','%s','%s','%s')"
-			DB().execute(conn,sql%(line['itemid'],line['summary'],line['type'],line['assigned_user']))
+				sql="insert into alm values ('%s','%s','%s','%s','%s','%s','%s')"
+			timeNow=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) 
+			DB().execute(conn,sql%(line['itemid'],line['summary'],line['type'],line['assigned_user'],line['state'],line['project'],timeNow))
 			conn.commit()
 	cur=DB().get_cursor(conn)
 	cur.execute("select * from alm")

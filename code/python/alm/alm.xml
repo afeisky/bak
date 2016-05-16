@@ -1,0 +1,106 @@
+<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
+   <env:Header/>
+   <env:Body>
+      <ns3:getItemsByCustomQueryResponse xmlns:ns1="http://webservice.mks.com/10/2/Integrity/schema" xmlns:ns3="http://webservice.mks.com/10/2/Integrity">
+         <return>
+              <ns1:Item ns1:ItemId="2154971">
+               <ns1:ItemField Name="Summary">
+                  <ns1:shorttext>
+                     <ns1:value>minisw first power on time speed up</ns1:value>
+                  </ns1:shorttext>
+               </ns1:ItemField>
+               <ns1:ItemField Name="Type">
+                  <ns1:type>Task</ns1:type>
+               </ns1:ItemField>
+               <ns1:ItemField Name="Assigned User">
+                  <ns1:UserRecord>
+                     <ns1:user>
+                        <ns1:value>wenhui.xu</ns1:value>
+                     </ns1:user>
+                     <ns1:fullname>
+                        <ns1:value>Wenhui, XU(WMD PIC HZ SWD 3-HZ-TCT)</ns1:value>
+                     </ns1:fullname>
+                     <ns1:email>
+                        <ns1:value>wenhui.xu.hz@tcl.com</ns1:value>
+                     </ns1:email>
+                  </ns1:UserRecord>
+               </ns1:ItemField>
+               <ns1:ItemField Name="Reporter Department">
+                  <ns1:shorttext>
+                     <ns1:value>WMD-PIC HZ-SWD 3</ns1:value>
+                  </ns1:shorttext>
+               </ns1:ItemField>
+               <ns1:ItemField Name="Assignee Department">
+                  <ns1:shorttext>
+                     <ns1:value>WMD-PIC HZ-SWD 3</ns1:value>
+                  </ns1:shorttext>
+               </ns1:ItemField>
+               <ns1:ItemField Name="ID">
+                  <ns1:integer>
+                     <ns1:value>2154971</ns1:value>
+                  </ns1:integer>
+               </ns1:ItemField>
+               <ns1:ItemField Name="Project">
+                  <ns1:project>
+                     <ns1:value>/TCT/MTK MT6580/PIXI4-5.5 3G</ns1:value>
+                  </ns1:project>
+               </ns1:ItemField>
+               <ns1:ItemField Name="State">
+                  <ns1:state>Resolved</ns1:state>
+               </ns1:ItemField>
+            </ns1:Item>
+            <ns1:Item ns1:ItemId="2153339">
+               <ns1:ItemField Name="Summary">
+                  <ns1:shorttext>
+                     <ns1:value>[USB Driver] can't connect USB debugging when connect as File transfers</ns1:value>
+                  </ns1:shorttext>
+               </ns1:ItemField>
+               <ns1:ItemField Name="Type">
+                  <ns1:type>Defect</ns1:type>
+               </ns1:ItemField>
+               <ns1:ItemField Name="Assigned User">
+                  <ns1:UserRecord>
+                     <ns1:user>
+                        <ns1:value>lang.feng</ns1:value>
+                     </ns1:user>
+                     <ns1:fullname>
+                        <ns1:value>Lang, FENG(WMD PIC HZ SWD 3-HZ-TCT)</ns1:value>
+                     </ns1:fullname>
+                     <ns1:email>
+                        <ns1:value>lang.feng@tcl.com</ns1:value>
+                     </ns1:email>
+                  </ns1:UserRecord>
+               </ns1:ItemField>
+               <ns1:ItemField Name="Reporter Department">
+                  <ns1:shorttext>
+                     <ns1:value>WMD-PIC HZ-VAL</ns1:value>
+                  </ns1:shorttext>
+               </ns1:ItemField>
+               <ns1:ItemField Name="Assignee Department">
+                  <ns1:shorttext>
+                     <ns1:value>WMD-PIC HZ-SWD 3</ns1:value>
+                  </ns1:shorttext>
+               </ns1:ItemField>
+               <ns1:ItemField Name="ID">
+                  <ns1:integer>
+                     <ns1:value>2153339</ns1:value>
+                  </ns1:integer>
+               </ns1:ItemField>
+               <ns1:ItemField Name="Project">
+                  <ns1:project>
+                     <ns1:value>/TCT/MTK MT6735M/Pixi4-5 4G Orange</ns1:value>
+                  </ns1:project>
+               </ns1:ItemField>
+               <ns1:ItemField Name="State">
+                  <ns1:state>Assigned</ns1:state>
+               </ns1:ItemField>
+               <ns1:ItemField Name="Deadline">
+                  <ns1:date>
+                     <ns1:value>?</ns1:value>
+                  </ns1:date>
+               </ns1:ItemField>
+            </ns1:Item>
+         </return>
+      </ns3:getItemsByCustomQueryResponse>
+   </env:Body>
+</env:Envelope>
