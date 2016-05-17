@@ -17,7 +17,7 @@ import tempfile
 from xml.dom.minidom import parse 
 import xml.dom.minidom 
 
-SHOW_SQL=True
+DEBUG=0
 
 class XML():
 	def getAttribute(self,node, attrname):
@@ -39,6 +39,7 @@ class XML():
 		return self.getNodeValue(self.getNode(self.getNode(self.getNode(node,node1)[0],node2)[0],node3)[0])
 
 class DB():
+
 	conn=None
 	def get_conn(self,path):
 		conn = sqlite3.connect(path) # need: import sqlite3
@@ -73,14 +74,14 @@ class DB():
 
 	def execute(self,conn,sql):
 		if sql is not None and sql != '':
-			if SHOW_SQL:
-				print('exectue sql:[%s]'%(sql))
+			if DEBUG:
+				print('exectue_sql:[%s]'%(sql))
 			cur = self.get_cursor(conn)
 			cur.execute(sql)
 			conn.commit()
 			self.close_all(conn, cur)
 		else:
-			print('the %s is empty or equal None!'%(sql))
+			print('SQL Error: the %s is empty or equal None!'%(sql))
 
 	def record_count(self,conn,sql):
 		cur=self.get_cursor(conn)
@@ -96,49 +97,53 @@ class DB():
 					conn.commit()
 				self.close_all(conn, cu)
 		else:
-			print('the %s is empty or equal None!'%(sql))
+			print('SQL Error: the %s is empty or equal None!'%(sql))
+
+	def getStringValue(self,conn, sql):
+		cur=self.get_cursor(conn)
+		cur.execute(sql)
+		line=cur.fetchone()
+		if line:
+			return line[0]
+		return None
 #-----------------------------
 class _CONN():
 	conn=DB().get_conn("swd3_alm.sqlite3")
 	def execute(self,sql):
 		if sql is not None and sql != '':
-			if SHOW_SQL:
+			if DEBUG:
 				print('exectue sql:[%s]'%(sql))
 			cur = self.get_cursor(self.conn)
 			cur.execute(sql)
 			self.conn.commit()
 			self.close_all(self.conn, cur)
 		else:
-			print('the %s is empty or equal None!'%(sql))
+			print('SQL Error: the %s is empty or equal None!'%(sql))
 	
 CONN=_CONN()
 #-----------------------------
-SQL=\
+ALM_SQL_STRING=\
 '''
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:int="http://webservice.mks.com/10/2/Integrity" xmlns:sch="http://webservice.mks.com/10/2/Integrity/schema">
    <soapenv:Header/>
    <soapenv:Body>
       <int:getItemsByCustomQuery>
-         <!--Optional:-->
          <arg0 transactionId="?">
-            <sch:Username>chaofei.wu</sch:Username>
-            <sch:Password>tcl000+</sch:Password>
-            <!--Optional:-->
+            <sch:Username>hudson.admin.hz1</sch:Username>
+            <sch:Password>12345678</sch:Password>
             <sch:DateFormat>?</sch:DateFormat>
-            <!--Optional:-->
             <sch:DateTimeFormat>?</sch:DateTimeFormat>
-            <!--Zero or more repetitions:-->
             <sch:InputField>Summary</sch:InputField>
-   	       <sch:InputField>Type</sch:InputField>
-   	       <sch:InputField>Assigned User</sch:InputField>
-   	       <sch:InputField>Reporter Department</sch:InputField>
-   	       <sch:InputField>Assignee Department</sch:InputField>
-   	       <sch:InputField>Deadline</sch:InputField>
-	       <sch:InputField>State</sch:InputField>    
-            <sch:QueryDefinition>(field[Assigned User] ="chaofei.wu","wenhui.xu","lang.feng")</sch:QueryDefinition>
+           <sch:InputField>Type</sch:InputField>
+           <sch:InputField>Assigned User</sch:InputField>
+           <sch:InputField>Reporter Department</sch:InputField>
+           <sch:InputField>Assignee Department</sch:InputField>
+           <sch:InputField>Deadline</sch:InputField>
+           <sch:InputField>State</sch:InputField>    
+           <sch:InputField>Project</sch:InputField>  
+            <sch:QueryDefinition>%s</sch:QueryDefinition>
          </arg0>
       </int:getItemsByCustomQuery>
-	COUNT=0
    </soapenv:Body>
 </soapenv:Envelope>
 '''
@@ -312,7 +317,8 @@ class _ALM():
 
 	def parseItem(self,parentNode):
 		itemID=XML().getAttribute(parentNode,'ns1:ItemId')
-		print("itemID="+itemID)
+		if DEBUG:
+			print("itemID="+itemID)
 		parentNodes=XML().getNode(parentNode,"ns1:ItemField")
 		itemName=""
 		Summary=""
@@ -333,7 +339,10 @@ class _ALM():
 					Type=XML().getNodeValue(XML().getNode(node,"ns1:type")[0]).replace("'","")
 					#print("Type="+Type)
 				elif itemName=="Assigned User":
-					Assigned_User=XML().getNodeValue3(node,"ns1:UserRecord","ns1:email","ns1:value").replace("'","")
+					if XML().getNode(XML().getNode(XML().getNode(node,"ns1:UserRecord")[0],"ns1:email")[0],"ns1:value"):
+						Assigned_User=XML().getNodeValue3(node,"ns1:UserRecord","ns1:email","ns1:value").replace("'","")
+					else:
+						Assigned_User=XML().getNodeValue3(node,"ns1:UserRecord","ns1:user","ns1:value").replace("'","")
 					#print("Assigned User="+Assigned_User)
 				elif itemName=="State":
 					State=XML().getNodeValue1(node,"ns1:state").replace("'","")
@@ -341,69 +350,134 @@ class _ALM():
 				elif itemName=="Project":
 					Project=XML().getNodeValue2(node,"ns1:project","ns1:value").replace("'","")
 					#print("Project="+Project)
-		return {"itemid":itemID,"summary":Summary,"type":Type,"assigned_user":Assigned_User,"state":State,"project":Project}
+		return {"itemid":itemID,"summary":Summary,"type":Type,"assigned_user":Assigned_User,"state":State,
+		"project":Project,"time":'',"new_time":"","assigned_time":"","opened_time":"",
+		"resolved_time":"","delivered_time":"","verifiedrw_time":"","deleted_time":"",
+		"deleted_time":"","closed_time":"",
+		}
 
+	def check_time(self,conn,old_state,line):
+		state=line['state']
+		print("     OK : [%s]-->[%s]"%(old_state,state))
+		if not state==old_state:
+			if state=='New':
+				DB().execute(conn,"update alm set new_time='%s' WHERE alm_id ='%s'"%(line['time'],line['itemid']))
+			elif state=='Assigned':
+				DB().execute(conn,"update alm set assigned_time='%s' WHERE alm_id ='%s'"%(line['time'],line['itemid']))
+			elif state=='Opened':
+				DB().execute(conn,"update alm set opened_time='%s' WHERE alm_id ='%s'"%(line['time'],line['itemid']))
+			elif state=='Resolved':
+				DB().execute(conn,"update alm set resolved_time='%s' WHERE alm_id ='%s'"%(line['time'],line['itemid']))
+			elif state=='Delivered':
+				DB().execute(conn,"update alm set delivered_time='%s' WHERE alm_id ='%s'"%(line['time'],line['itemid']))
+			elif state=='Verified_SW':
+				DB().execute(conn,"update alm set verifiedrw_time='%s' WHERE alm_id ='%s'"%(line['time'],line['itemid']))
+			elif state=='Deleted':
+				DB().execute(conn,"update alm set deleted_time='%s' WHERE alm_id ='%s'"%(line['time'],line['itemid']))
+			elif state=='Closed':
+				DB().execute(conn,"update alm set closed_time='%s' WHERE alm_id ='%s'"%(line['time'],line['itemid']))
+			else:
+				print("Error: not found this state=[%s]"%(state))
+	def SQL(self,sql_custom):
+		global ALM_SQL_STRING
+		url='https://172.24.147.72:7003/webservices/10/2/Integrity/'
+		if DEBUG:
+			print(ALM_SQL_STRING)
+			print(sql_custom)
+		query_string=ALM_SQL_STRING%(sql_custom)
+		headers = {'SOAPAction': u'""','Content-Type': 'text/xml;charset=UTF-8','Connection': 'close','Content-Length': str(len(query_string))}
+		if DEBUG:
+			print("query_string="+query_string)
+		req = urllib2.Request(url, query_string, headers)
+		try:
+			f = urllib2.urlopen(req, timeout=5)
+			response = f.read()
+			fout= open("alm_sql_result~.xml",'w')
+			fout.write(response)
+			fout.close()
+		except urllib2.HTTPError, e:
+			return 404
+		except urllib2.URLError, e:
+			return 500
+		print response
+		return 200
 
-
-def main():
+	def write_db(self,ALM):
+		doc = xml.dom.minidom.parse("alm_sql_result~.xml") 
+		root = doc.documentElement
+		node_key = 'return'
+		nodes = XML().getNode(root,node_key)
+		if DEBUG:
+			print("len=%d"%(len(nodes)))
+		return_node=ALM.getNodeitem(root)
+		if DEBUG:
+			print(return_node)
+		if not return_node==None:
+			nodes=XML().getNode(root,"ns1:Item")
+			conn=DB().get_conn("swd3_alm.sqlite3")
+			if not DB().exist(conn,"alm"):
+				sql="create table alm (alm_id integer primary key,summary varchar(100),type text varchar(20),"
+				sql+="assigned_user varchar(30),state varchar(20),project varchar(60),time varchar(19),"
+				sql+="new_time varchar(19),"
+				sql+="assigned_time varchar(19),open_time varchar(19),resolved_time varchar(19),"
+				sql+="delivered_time varchar(19),verifiedrw_time varchar(19)"
+				sql+=")"
+				DB().execute(conn,sql)
 			
-	doc = xml.dom.minidom.parse("alm.xml") 
-	root = doc.documentElement
-	node_key = 'return'
-	nodes = XML().getNode(root,node_key)
-	print("len=%d"%(len(nodes)))
-	item_id = ""
-
-	COUNT=0
-
-	ALM=_ALM()
-	return_node=ALM.getNodeitem(root)
-	print(return_node)
-	if not return_node==None:
-		nodes=XML().getNode(root,"ns1:Item")
-		conn=DB().get_conn("swd3_alm.sqlite3")
-		if not DB().exist(conn,"alm"):
-			DB().execute(conn,"create table alm (alm_id integer primary key,summary varchar(100),type text varchar(20),assigned_user varchar(30),state varchar(20),project varchar(60),time varchar(19))")
+			if not DB().exist(conn,"alm"):
+				print("Error! not found table:alm")
+				exit(1)
+			n_index=1
+			for node in return_node.childNodes:
+				if node.nodeType == node.ELEMENT_NODE:
+					print("%4d :  %s->[%s]"%(n_index,return_node.nodeName,XML().getAttribute(node,'ns1:ItemId')))
+					line=ALM.parseItem(node)
+					line['time']=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) 
+					if DEBUG:
+						print(line)
+					if not line['type'] in ['Task','Defect','MTK Defect','Genernal FR']:
+						continue
+					#DB().record_count(conn,"select state from alm where alm_id='%s'"%(line['itemid']))
+					old_state=DB().getStringValue(conn,"select state from alm where alm_id='%s'"%(line['itemid']))
+					if not old_state==None:
+						#update_sql = "UPDATE alm SET name = ? WHERE alm_id ='%s'"%(line['itemid'])
+						#data = [('id', index),
+								#('alm_id', itemID),
+								#('type', self.Type),
+								#('assigned_user', self.Assigned_User)]
+						#DB().update(conn, update_sql, data)
+						sql="update alm set "
+						sql+=" alm_id='%s',summary='%s',type='%s',assigned_user='%s',state='%s',project='%s',time='%s' "
+						sql+=" WHERE alm_id ='"+line['itemid']+"'"
+						DB().execute(conn,sql%(line['itemid'],line['summary'],line['type'],line['assigned_user'],line['state'],line['project'],line['time']))
+						ALM.check_time(conn,old_state,line)
+					else:
+						sql="insert into alm (alm_id,summary,type,assigned_user,state,project,time) values ('%s','%s','%s','%s','%s','%s','%s')"
+						DB().execute(conn,sql%(line['itemid'],line['summary'],line['type'],line['assigned_user'],line['state'],line['project'],line['time']))
+						ALM.check_time(conn,"",line)
+					n_index+=1
+			print("count=%4d,"%(n_index-1))
+			#cur=DB().get_cursor(conn)
+			#cur.execute("select * from alm")
+			#for item in cur.fetchall():
+			#	for element in item:
+			#		print element,
+			#	print
 		
-		if not DB().exist(conn,"alm"):
-			print("Error! not found table:alm")
-			exit(1)
-
-		for node in return_node.childNodes:
-			if node.nodeType == node.ELEMENT_NODE:
-				print("%s->[%s]"%(return_node.nodeName,node.nodeName))
-				
-				line=ALM.parseItem(node)
-				print(line)
-				timeNow=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) 
-				if (DB().record_count(conn,"select * from alm where alm_id='%s'"%(line['itemid']))):
-					#update_sql = "UPDATE alm SET name = ? WHERE alm_id ='%s'"%(line['itemid'])
-					#data = [('id', index),
-							#('alm_id', itemID),
-							#('type', self.Type),
-							#('assigned_user', self.Assigned_User)]
-					#DB().update(conn, update_sql, data)
-					sql="update alm set alm_id='%s',summary='%s',type='%s',assigned_user='%s',state='%s',project='%s' WHERE alm_id ='"+line['itemid']+"'"
-					DB().execute(conn,sql%(line['itemid'],line['summary'],line['type'],line['assigned_user'],line['state'],line['project']))
-				else:
-					sql="insert into alm values ('%s','%s','%s','%s','%s','%s','%s')"
-					DB().execute(conn,sql%(line['itemid'],line['summary'],line['type'],line['assigned_user'],line['state'],line['project'],timeNow))
-				conn.commit()
-		cur=DB().get_cursor(conn)
-		cur.execute("select * from alm")
-		for item in cur.fetchall():
-			for element in item:
-				print element,
-			print
+def main():
+	ALM=_ALM()
+	#value=ALM.SQL('(field[Assigned User] ="chaofei.wu","yaosen.lin.hz","wenhui.xu","lang.feng","zhenming.chen","yadong.yang","yunqi.song")')
+	value=ALM.SQL('(field[Project] ="/TCT/MTK MT6580/PIXI4-5.5 3G","/TCT/MTK MT6735M/Pixi4-5 4G Orange")')
+	if (value==200):
+		ALM.write_db(ALM)
 	timeNow=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 	os.system("echo '%s' >> alm_log.log"%(timeNow))
-	main_timer()
+	#main_timer()
 
 def main_timer():
-	t = threading.Timer(3600.0, main)
+	t = threading.Timer(300.0, main)
 	t.start()
 
 if __name__ == "__main__":
 	main()
-	main_timer()
 	print("-------done!---------")
