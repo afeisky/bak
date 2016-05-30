@@ -512,8 +512,8 @@ public class Eml {
 //	    
 //	    // create and fill the first message part
 //	    MimeBodyPart mbpContent = new MimeBodyPart();
-//	    // ×¼±¸ÓÊ¼şÕıÎÄÊı¾İ
-//	    //text.setContent("ÕâÊÇÒ»·âÓÊ¼şÕıÎÄ´øÍ¼Æ¬<img src='cid:xxx.jpg'>µÄÓÊ¼ş", "text/html;charset=UTF-8");
+//	    // å‡†å¤‡é‚®ä»¶æ­£æ–‡æ•°æ®
+//	    //text.setContent("è¿™æ˜¯ä¸€å°é‚®ä»¶æ­£æ–‡å¸¦å›¾ç‰‡<img src='cid:xxx.jpg'>çš„é‚®ä»¶", "text/html;charset=UTF-8");
 //	    System.out.println("=================");
 //	    System.out.println(content);
 //	    mbpContent.setText(content, "text/html;charset=UTF-8"); 
@@ -571,11 +571,11 @@ public class Eml {
     	    System.out.println(eml_content);
 			MimeMultipart allPart = new MimeMultipart("mixed");  
 			
-	        // ÓÃÓÚ±£´æ×îÖÕÕıÎÄ²¿·Ö   
+	        // ç”¨äºä¿å­˜æœ€ç»ˆæ­£æ–‡éƒ¨åˆ†   
 	        MimeBodyPart contentBody = new MimeBodyPart();  
-	        // ÓÃÓÚ×éºÏÎÄ±¾ºÍÍ¼Æ¬£¬"related"ĞÍµÄMimeMultipart¶ÔÏó  
+	        // ç”¨äºç»„åˆæ–‡æœ¬å’Œå›¾ç‰‡ï¼Œ"related"å‹çš„MimeMultipartå¯¹è±¡  
 	        MimeMultipart contentMulti = new MimeMultipart("related");  
-	        // ÕıÎÄµÄÎÄ±¾²¿·Ö  
+	        // æ­£æ–‡çš„æ–‡æœ¬éƒ¨åˆ†  
 	        MimeBodyPart textBody = new MimeBodyPart();  
 	        textBody.setContent(eml_content, "text/html;charset=gbk");  
 	        contentMulti.addBodyPart(textBody);    
@@ -597,7 +597,7 @@ public class Eml {
     				}
     			}
     		}    	    
-    		// ½«ÉÏÃæ"related"ĞÍµÄ MimeMultipart ¶ÔÏó×÷ÎªÓÊ¼şµÄÕıÎÄ  
+    		// å°†ä¸Šé¢"related"å‹çš„ MimeMultipart å¯¹è±¡ä½œä¸ºé‚®ä»¶çš„æ­£æ–‡  
     		contentBody.setContent(contentMulti);  //contentBody has Multi
     		allPart.addBodyPart(contentBody);
     	    MimeMsg.setContent(allPart);
@@ -720,8 +720,8 @@ public class Eml {
     } 
 	
 	private void func_readme(){
-//		MimeBodyPart createAttachment(String fileName) ·½·¨ÓÃÓÚ´´½¨¸½¼ş²¢·µ»Ø£»
-//		MimeBodyPart createContent(String body, String fileName) ·½·¨ÓÃÓÚ´´½¨ÕıÎÄ²¿·Ö²¢·µ»Ø£»
-//		MimeMessage createMessage(Session session) ·½·¨ÓÃÓÚµ÷ÓÃÉÏÃæµÄÁ½¸ö·½·¨Éú³ÉÓÊ¼ş¡£
+//		MimeBodyPart createAttachment(String fileName) æ–¹æ³•ç”¨äºåˆ›å»ºé™„ä»¶å¹¶è¿”å›ï¼›
+//		MimeBodyPart createContent(String body, String fileName) æ–¹æ³•ç”¨äºåˆ›å»ºæ­£æ–‡éƒ¨åˆ†å¹¶è¿”å›ï¼›
+//		MimeMessage createMessage(Session session) æ–¹æ³•ç”¨äºè°ƒç”¨ä¸Šé¢çš„ä¸¤ä¸ªæ–¹æ³•ç”Ÿæˆé‚®ä»¶ã€‚
 	}
 }

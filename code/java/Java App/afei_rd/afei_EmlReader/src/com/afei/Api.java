@@ -16,6 +16,8 @@ import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.program.Program;
+import org.eclipse.swt.widgets.FileDialog;
+import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.Widget;
@@ -157,5 +159,54 @@ public class Api {
 		}
     	   return buffer.toString();
     	}
+	public static String openDialog(String title,String Fillter){
+		String extName=Data.fileExtName;
+		FileDialog dialog = new FileDialog (Data.shell, SWT.OPEN);  
+        dialog.setText(title);  
+        //dialog.setFilterNames(new String[] {"AMail Files ("+filterExtName+")","All Files (*.*)"});  
+        dialog.setFilterNames(new String[]  {"Files ("+Data.filterExtName+")"});
+        dialog.setFilterExtensions(new String[] {Data.filterExtName});  	
+        String filePath = dialog.open();
+        System.out.println("filePath filePath ="+filePath);
+        System.out.println("filePath getFileName ="+dialog.getFileName());
+        if(dialog!=null && filePath!=null){
+        	return filePath;
+        }
+        return "";
+	}
+	
+	public static String saveDialog(String title,String Fillter){
+		String extName=Data.fileExtName;
+		FileDialog dialog = new FileDialog (Data.shell, SWT.OPEN);  
+        dialog.setText(title);  
+        //dialog.setFilterNames(new String[] {"AMail Files ("+filterExtName+")","All Files (*.*)"});  
+        dialog.setFilterNames(new String[] {"Files ("+Data.filterExtName+")"});
+        dialog.setFilterExtensions(new String[] {Data.filterExtName});
+        String filePath = dialog.open();
+        System.out.println("filePath filePath ="+filePath);
+        System.out.println("filePath getFileName ="+dialog.getFileName());
+        if(dialog!=null && filePath!=null){
+        	if (filePath.length()>=extName.length()){
+        		String ext1=filePath.substring(filePath.length()-extName.length(), filePath.length()).toLowerCase();
+        		if (!ext1.equals(extName.toLowerCase())) {
+        			filePath+=extName;
+        		}
+        	}else{
+        		filePath+=extName;
+        	}
+        	return filePath;
+        }
+        return "";
+	}
 
+	private void dialog1(FileDialog dialog){
+		boolean done = false;  
+		MessageBox mg = new MessageBox(dialog.getParent(), SWT.ICON_WARNING| SWT.YES);
+		
+        mg.setText("Hint");  
+        mg.setMessage("coding...");  
+        done = mg.open() == SWT.YES;  
+        done = true;  
+	}
+	
 }

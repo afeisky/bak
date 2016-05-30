@@ -1,2 +1,3 @@
-Ò»¸ö¶ÁÐ´.emlÎÄ¼þµÄ³ÌÐò
-ÐèÒª°²×°J2EEºÍWindowBuilder²å¼þ
+ï»¿ä¸€ä¸ªè¯»å†™.emlæ–‡ä»¶çš„ç¨‹åº
+éœ€è¦å®‰è£…J2EEå’ŒWindowBuilderæ’ä»¶
+å»ºä¸€ä¸ªMain window: new-->other->SWT-->SWT Designiner->SWT->Application Window.
