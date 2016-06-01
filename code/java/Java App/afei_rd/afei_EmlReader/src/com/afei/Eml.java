@@ -1,16 +1,21 @@
 package com.afei;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -68,6 +73,7 @@ public class Eml {
 	private MimeBodyPart MimeBp;
 	private Date eml_date;
 	private String imageExtName[]={"png","jpg","jpeg","gif","bmp"};
+	public boolean isModify=false;
 	
 	public Eml() {
 	
@@ -123,10 +129,10 @@ public class Eml {
 				map = ilist.next();
 				mbp1=(MimeBodyPart) map.get("MimeBodyPart");
 				try {
-					//System.out.println("getContentType:"+mbp1.getContentType());
-					//System.out.println("getContentID:"+mbp1.getContentID());
+					//Api.log("getContentType:"+mbp1.getContentType());
+					//Api.log("getContentID:"+mbp1.getContentID());
 					if (map.get("fileName").toString().length()==0){
-						//System.out.println("----getContent:"+mbp1.getContent());
+						//Api.log("----getContent:"+mbp1.getContent());
 						if (mbp1.isMimeType("text/html")){
 							eml_content= mbp1.getContent().toString();
 							ilist.remove();
@@ -157,9 +163,9 @@ public class Eml {
 			String extName="xxx";
 			extName=fileName.substring(lastDotPos + 1);
 			for (int i=0;i<image.length-1;i++){
-				System.out.print("image[i]:"+image[i]+","+extName);
+				Api.log("image[i]:"+image[i]+","+extName);
 				if (extName.equals(image[i])){
-					System.out.println("--> is image");
+					Api.log("--> is image");
 					isImage=true;
 					break;
 				}
@@ -176,8 +182,8 @@ public class Eml {
 		        mbp1.setFileName(fds.getName());
 		        mbp1.setContentID(fds.getName());
 		        mbp1.setHeader("Content-Transfer-Encoding", "base64");
-	            System.out.println("--mbp1 is "+mbp1.getEncoding());  
-	            System.out.println("--encode source is : " + MimeUtility.getEncoding(fds));
+	            Api.log("--mbp1 is "+mbp1.getEncoding());  
+	            Api.log("--encode source is : " + MimeUtility.getEncoding(fds));
 	            //mbp1.writeTo(System.out);
 		        contentID=mbp1.getContentID();
 	    	}else{
@@ -187,9 +193,10 @@ public class Eml {
 		    map.put("pathFileName", pathFileName);	  	    	
 		    map.put("fileName", fileName);//getFileNameInPathFileName(pathFileName));
 		    map.put("contentID", contentID);
-		    System.out.print("getContentType:"+mbp1.getContentType());
-		    System.out.print("getContent:"+mbp1.getContent());
+		    Api.log("getContentType:"+mbp1.getContentType());
+		    Api.log("getContent:"+mbp1.getContent());
 		    listAttach.add(map);
+		    isModify=true;
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -203,30 +210,32 @@ public class Eml {
 
 	public int removeAttachFile(int indexSort) {
 		listAttach.remove(indexSort);
+		isModify=true;
 		return 0;
 	}
 
-	public int removeAttachFile(String pathFileName) {
-		Map<String, Object> map = new HashMap<String, Object>();
-		Iterator<Map<String, Object>> ilist = listAttach.iterator();
-		if (listAttach != null) {
-			while (ilist.hasNext()) {
-				map = ilist.next();
-				System.out.println("pathFileName=" + map.get("pathFileName"));
-				if (map.get("pathFileName") == pathFileName ) {
-					ilist.remove();
-				}
-				// Integer currid = (Integer)
-				// listAttachPathName.get(position).get("id");
-			}
-		}
-		return 0;
-	}
+//	public int removeAttachFile(String pathFileName) {
+//		Map<String, Object> map = new HashMap<String, Object>();
+//		Iterator<Map<String, Object>> ilist = listAttach.iterator();
+//		if (listAttach != null) {
+//			while (ilist.hasNext()) {
+//				map = ilist.next();
+//				Api.log("pathFileName=" + map.get("pathFileName"));
+//				if (map.get("pathFileName") == pathFileName ) {
+//					ilist.remove();
+//					isModify=true;
+//				}
+//				// Integer currid = (Integer)
+//				// listAttachPathName.get(position).get("id");
+//			}
+//		}
+//		return 0;
+//	}
 	
-	public int removeAttach(int indexSort) {
-		listAttach.remove(indexSort);
-		return 0;
-	}
+//	public int removeAttach(int indexSort) {
+//		listAttach.remove(indexSort);
+//		return 0;
+//	}
 	public String getFileNameInPathFileName(String pathFileName){
 		pathFileName.replaceAll("//", "\\");
 	    int i=pathFileName.lastIndexOf("\\");
@@ -276,6 +285,7 @@ public class Eml {
 				}
 			}
 			setAttachInfo();
+			isModify=false;
 			pr("--Done!----------------------EML2-");
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
@@ -329,12 +339,12 @@ public class Eml {
 			pr("This is plain text");
 			pr("---------------------------");
 			// if (!showStructure && !saveAttachments)
-			//System.out.println((String) p.getContent());
+			//Api.log((String) p.getContent());
 			eml_content=(String) p.getContent();
 			eml_contentType=p.getContentType().toString();
 			if (p.getContent().toString().length()>0){
-				System.out.println(eml_content);
-				//getAttach(filename,null,eml_contentType,eml_content,eml_contentType.length(),p.toString());
+				Api.log(eml_content);
+				attachBodyPart((MimeBodyPart)p,filename);				
 			}
 			
 		} else if (p.isMimeType("multipart/*")) {
@@ -367,7 +377,7 @@ public class Eml {
 				if (o instanceof String) {
 					pr("This is a string");
 					pr("---------------------------");
-					System.out.println(o.toString().substring(50));
+					//Api.log(o.toString().substring(50));
 					attachBodyPart((MimeBodyPart)p,filename);
 					//getAttach(null,filename,"String",o.toString(),-1,o.toString());
 					//MimeMp.addBodyPart((MimeBodyPart) p);
@@ -514,8 +524,8 @@ public class Eml {
 //	    MimeBodyPart mbpContent = new MimeBodyPart();
 //	    // 准备邮件正文数据
 //	    //text.setContent("这是一封邮件正文带图片<img src='cid:xxx.jpg'>的邮件", "text/html;charset=UTF-8");
-//	    System.out.println("=================");
-//	    System.out.println(content);
+//	    Api.log("=================");
+//	    Api.log(content);
 //	    mbpContent.setText(content, "text/html;charset=UTF-8"); 
 //	    MimeMp.addBodyPart(mbpContent);
 		pr("----------dumpEnvelope-----------------<<<");
@@ -547,14 +557,14 @@ public class Eml {
 	private boolean sessionDebug=true;
 
 	public void pr(String s) {
-		if (true)
+		if (Api.DEBUG)
 			System.out.print(indentStr.substring(0, level * 4));
-		System.out.println(s);
+		Api.log(s);
 	}
 
 	public boolean Save(String pathFileName){
 		try {
-			System.out.println("pathFileName:"+pathFileName);
+			Api.log("pathFileName:"+pathFileName);
 	    	// create some properties and get the default Session
 	    	Properties props = System.getProperties();
 	    	props.put("mail.smtp.host", host);	    	
@@ -565,10 +575,10 @@ public class Eml {
     	    MimeMessage MimeMsg = new MimeMessage(session);
 			//MimeMsg.setFrom(from[0]);//msg.setFrom(new InternetAddress(from));
 			//MimeMsg.setRecipients(Message.RecipientType.TO, to);
-    	    System.out.println("subject:"+eml_subject);
+    	    Api.log("subject:"+eml_subject);
 			MimeMsg.setSubject(eml_subject);
-    	    System.out.println("=================");
-    	    System.out.println(eml_content);
+    	    Api.log("=================");
+    	    Api.log(eml_content);
 			MimeMultipart allPart = new MimeMultipart("mixed");  
 			
 	        // 用于保存最终正文部分   
@@ -587,12 +597,12 @@ public class Eml {
     			while (ilist.hasNext()){				
     				map = ilist.next();
     				String contentID=(String) map.get("contentID").toString();
-    				System.out.println("Save fileName="+map.get("fileName").toString()+",contentID:"+contentID);		
+    				Api.log("Save fileName="+map.get("fileName").toString()+",contentID:"+contentID);		
     				if (contentID.length()>0){
-    					System.out.println("is image");
+    					Api.log("is image");
     			        contentMulti.addBodyPart((MimeBodyPart)map.get("MimeBodyPart"));
     				}else{
-    					System.out.println("is attachment");
+    					Api.log("is attachment");
     					allPart.addBodyPart((MimeBodyPart)map.get("MimeBodyPart"));
     				}
     			}
@@ -640,10 +650,10 @@ public class Eml {
     	    MimeMsg = new MimeMessage(session);
 			//MimeMsg.setFrom(from[0]);//msg.setFrom(new InternetAddress(from));
 			//MimeMsg.setRecipients(Message.RecipientType.TO, to);
-    	    System.out.println("subject:"+eml_subject);
+    	    Api.log("subject:"+eml_subject);
 			MimeMsg.setSubject(eml_subject);
-    	    System.out.println("=================");
-    	    System.out.println(eml_content);
+    	    Api.log("=================");
+    	    Api.log(eml_content);
     	    listAttach = new ArrayList<Map<String, Object>>();
     	    // send the message
     	    //Transport.send(msg);
@@ -663,7 +673,7 @@ public class Eml {
 			String filename="";
 			SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd_HHmmss");
 			String name=appDir+"\\~~TEMP_"+fmt.format((new Date()).getTime());
-			System.out.println(index+" name:"+name);
+			Api.log(index+" name:"+name);
     	    Map<String, Object> map = new HashMap<String, Object>();
     		Iterator<Map<String, Object>> ilist = listAttach.iterator();
     		if (listAttach!=null){
@@ -673,11 +683,47 @@ public class Eml {
     				if (n==index){
     					MimeBodyPart mbp=(MimeBodyPart)map.get("MimeBodyPart");
     					name=name+map.get("fileName").toString();
-    					System.out.println("  name:"+name);
+    					Api.log(index+"]  name:"+name);
 						try {
-							FileOutputStream fos = new FileOutputStream(name);
-							mbp.writeTo(fos);
-							fos.close();
+							
+							Object o = mbp.getContent();
+							if (o instanceof String) {	
+								pr(mbp.getContentType());
+								Enumeration en= mbp.getAllHeaderLines();								
+								//while (en.hasMoreElements()){
+								//	pr(en.nextElement().toString());
+								//}
+								String str=(String)o.toString();
+								pr("a=="+mbp.getDescription());
+								Api.log("+++="+mbp.getEncoding()+mbp.getAllHeaderLines());
+						        //BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(name),mbp.getEncoding()));
+								FileWriter fw = new FileWriter(name);
+								//str.getBytes("gb2312");
+								fw.write(str);
+								fw.close();						        
+								pr("------This is a string!--------------");
+								pr(str);
+							}else if (o instanceof InputStream) {
+								FileOutputStream fos = new FileOutputStream(name);
+								//mbp.writeTo(fos);
+								pr("------This is just an input stream!----------");
+								InputStream is = (InputStream) o;
+								int c;
+								while ((c = is.read()) != -1){
+									//System.out.write(c);
+									fos.write(c);
+								}
+								fos.close();
+								Runtime.getRuntime().exec(new String[]{"cmd.exe", "/c", name});
+					            
+							}else {
+								FileOutputStream fos = new FileOutputStream(name);
+								pr("-----This is an unknown type!-------");
+								//pr(o.toString());
+								fos.write(o.toString().getBytes());
+								fos.close();
+							}
+							
 	    					filename=name;
 	    					break;
 						} catch (FileNotFoundException e) {

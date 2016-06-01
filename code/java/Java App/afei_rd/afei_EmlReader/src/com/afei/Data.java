@@ -7,6 +7,7 @@ public class Data {
 	public static String filterExtName="*.eml";//"*.aml;*.html;*.htm;*.txt;*.eml";
 	public static String fileExtName=".eml";//"*.aml;*.html;*.htm;*.txt;*.eml";
 	public static Shell shell;
+	
 	public Data(){
 		
 	}
