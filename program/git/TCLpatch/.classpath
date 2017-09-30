@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+	<classpathentry kind="lib" path="/disk1/workspace/tclpatch/lib/commons-beanutils-1.7.0.jar"/>
+	<classpathentry kind="lib" path="/disk1/workspace/tclpatch/lib/commons-collections-3.2.1.jar"/>
+	<classpathentry kind="lib" path="/disk1/workspace/tclpatch/lib/commons-httpclient-3.1.jar"/>
+	<classpathentry kind="lib" path="/disk1/workspace/tclpatch/lib/commons-lang-2.3.jar"/>
+	<classpathentry kind="lib" path="/disk1/workspace/tclpatch/lib/commons-logging-1.1.1.jar"/>
+	<classpathentry kind="lib" path="/disk1/workspace/tclpatch/lib/ezmorph-1.0.3.jar"/>
+	<classpathentry kind="lib" path="/disk1/workspace/tclpatch/lib/json-lib-2.2.3-jdk15.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

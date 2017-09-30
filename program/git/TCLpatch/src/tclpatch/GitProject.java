@@ -1,5 +1,5 @@
 //# Copyright (C) 2017 TCL Mobile
-package tctpatch;
+package tclpatch;
 
 import java.util.ArrayList;
 

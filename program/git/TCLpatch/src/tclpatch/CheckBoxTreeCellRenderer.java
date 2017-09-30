@@ -1,5 +1,5 @@
 //# Copyright (C) 2017 TCL Mobile
-package tctpatch;
+package tclpatch;
 
 /**
  *
@@ -28,7 +28,7 @@ public class CheckBoxTreeCellRenderer extends JPanel implements TreeCellRenderer
         add(check = new JCheckBox());  
         add(label = new CheckBoxTreeLabel());  
         check.setBackground(UIManager.getColor("Tree.textBackground"));  
-        label.setForeground(UIManager.getColor("Tree.textForeground"));  
+        label.setForeground(UIManager.getColor("Tree.textForeground"));     
     }  
       
     /** 
@@ -44,12 +44,12 @@ public class CheckBoxTreeCellRenderer extends JPanel implements TreeCellRenderer
         String stringValue = tree.convertValueToText(value, selected, expanded, leaf, row, hasFocus);  
         setEnabled(tree.isEnabled());  
         check.setSelected(((CheckBoxTreeNode)value).isSelected());  
-        label.setFont(tree.getFont());  
+        label.setFont(new java.awt.Font("Dialog", 1, 12)); //"DejaVu Sans" //label.setFont(tree.getFont());    
         label.setText(stringValue);  
         label.setSelected(selected);  
         label.setFocus(hasFocus);  
         if(leaf)  
-            label.setIcon(UIManager.getIcon("Tree.leafIcon"));  
+            label.setIcon(UIManager.getIcon("Tree.leafIcon")); 
         else if(expanded)  
             label.setIcon(UIManager.getIcon("Tree.openIcon"));  
         else  

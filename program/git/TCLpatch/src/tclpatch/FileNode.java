@@ -1,4 +1,4 @@
-package tctpatch;
+package tclpatch;
 
 /**
  *
