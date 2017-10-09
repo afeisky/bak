@@ -123,8 +123,10 @@ def getalmbranch(project):
         line = line.strip()
         line = line.replace('"','')
         almbranch = line.split(',')
-        if project in almbranch[0]:
+        if project.find(almbranch[0])>=0:
             return almbranch
+        #if project in almbranch[0]:
+        #    return almbranch
     return branch
 
 def checkBugNumber(alm_apply_app,default_revision,cmd):
@@ -133,7 +135,9 @@ def checkBugNumber(alm_apply_app,default_revision,cmd):
     # /wcf/tools/scm_tools/tools/test.py 'bugNumberCheck' '/wcf/tools/scm_tools/tools/ALM_check.py' 'pixi3-4.5-4g-v1.0-dint' 5327041
     print(alm_apply_app, default_revision, cmd)
     allbranchs=getalmbranch(default_revision)
-    #print(allbranchs)
+    print(allbranchs)
+    #if len(allbranchs) >= 2:
+    #    del allbranchs[0:2]
     lines = commands.getoutput("%s %s %s" % (alm_apply_app, default_revision, cmd)).split('\n')
     ret = lines[len(lines) - 1]
     g_is_mtk_patch=False
@@ -159,7 +163,7 @@ def checkBugNumber(alm_apply_app,default_revision,cmd):
             print("\033[32;1mOK! go next\033[0m")
             update_bug_number = cmd
             print('[TCL*PATCH]')
-            if (bug_dint not in allbranchs):
+            if ('all' not in allbranchs and (bug_dint not in allbranchs)):
                 print("Error!!bug's branch(%s) not belong %s,\nplease check your bug is right!!!)"%(bug_dint,default_revision))
             else:
                 print('{"result":1,"is_mtk_patch":%d,"title":"%s","dint":"%s"}'%(g_is_mtk_patch,bug_title,bug_dint))
@@ -223,6 +227,7 @@ def gitRm(gitpath,filename):
     print('[TCL*PATCH]')
     print('{"result":1}')
 
+
 def gitSubmitAndPush(gitpath,gitname,default_revision,comments):
     print("%s" % (comments))
     comments=comments[1:len(comments)-1]
@@ -244,6 +249,7 @@ def gitSubmitAndPush(gitpath,gitname,default_revision,comments):
     print("%s" % (cmd))
     lines=commands.getoutput(cmd)
     print("commit=%s," % (lines))
+    pushUrl=''
     if True:
         cmd = "git push ssh://%s@10.92.32.10:29418/%s HEAD:refs/for/%s" % (user_name, gitname, default_revision)
         cmd_no_thin = "git push --no-thin ssh://%s@10.92.32.10:29418/%s HEAD:refs/for/%s" % (user_name, gitname, default_revision)
@@ -251,8 +257,21 @@ def gitSubmitAndPush(gitpath,gitname,default_revision,comments):
         print("%s" % (cmd))
         lines=commands.getoutput(cmd)
         print("push=%s," % (lines))
+        line = lines
+        strS = 'http://10.92.32.45:8081/'
+        nPos = line.find(strS)
+        if nPos > 0:
+            pushUrl = line[nPos:nPos + len(strS) + 7].strip()
+        if len(pushUrl)==0:
+            for line in lines:
+                if nPos>0:
+                    pushUrl.append(line[nPos:nPos+len(strS)+7]).strip()
+        print(pushUrl)
     print('[TCL*PATCH]')
-    print('{"result":1}')
+    if len(pushUrl)>0:
+        print('{"result":1,"pushurl":"%s"}'%pushUrl)
+    else:
+        print('{"result":0,"comment":"error!"}')
 
 def smarttask(gitPath):
     pass

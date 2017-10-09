@@ -61,7 +61,7 @@ public class Main extends JFrame {
     private DefaultMutableTreeNode root;
 
     private JButton btnSubmit;
-    private final String SoftwareVersion = "v1.0.20170927";
+    private final String SoftwareVersion = "v0.2.20170927";
     private final String SoftwareMailto = "chaofei.wu.hz@tcl.com";
     private CheckBoxTreeNode rootNode;
 
@@ -300,49 +300,58 @@ public class Main extends JFrame {
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
+        jLabel1.setForeground(new java.awt.Color(0, 0, 255));
         jLabel1.setText("Bug number");
 
-        jtextNumber.setText("");
+        jtextNumber.setText("jtextNumber");
 
+        jLabel2.setForeground(new java.awt.Color(0, 0, 255));
         jLabel2.setText("Root cause");
 
+        jLabel3.setForeground(new java.awt.Color(0, 0, 255));
         jLabel3.setText("Bug Category");
 
+        jLabel4.setForeground(new java.awt.Color(0, 0, 255));
         jLabel4.setText("Module impact");
 
-        jtextModule.setText("");
+        jtextModule.setText("jtextModule");
 
+        jLabel5.setForeground(new java.awt.Color(0, 0, 255));
         jLabel5.setText("test suggestion");
 
-        jtextTest.setText("");
+        jtextTest.setText("jtextTest");
 
+        jLabel7.setForeground(new java.awt.Color(0, 0, 255));
         jLabel7.setText("solution");
 
-        jtextSolution.setText("");
+        jtextSolution.setText("jtextSolution");
 
+        jLabel9.setForeground(new java.awt.Color(0, 0, 255));
         jLabel9.setText("Action Hours");
 
         jCheckBox1.setText("Is change MenuTree?");
 
+        jLabel6.setForeground(new java.awt.Color(0, 0, 255));
         jLabel6.setText("Comment");
 
-        jtextComment.setText("");
+        jtextComment.setFont(new java.awt.Font("宋体", 1, 12)); // NOI18N
+        jtextComment.setText("jtextComment");
 
+        jLabel8.setForeground(new java.awt.Color(0, 0, 255));
         jLabel8.setText("Root cause detial");
 
-        jtextRootDetail.setText("");
+        jtextRootDetail.setText("jtextRootDetail");
 
         jcomboboxPatchType.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ALPS", "MODEM_LWG", "MODEM_C2K" }));
 
         jcomboboxRoot.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Design", "Coding", "Architecture", "Regression", "Evolution", "Unknown_Today", "Specification" }));
 
-        jcomboBoxBug.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Platform", "Android", "TCT", "3rd Party"}));
+        jcomboBoxBug.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Platform", "Android", "TCT", "3rd Party" }));
 
         jCheckBoxMtkPatch.setText("Is MTK Patch?");
         jCheckBoxMtkPatch.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-        		jcomboboxPatchType.setEnabled(jCheckBoxMtkPatch.isSelected());
-        		jtextfieldPn.setEnabled(jCheckBoxMtkPatch.isSelected());     
+                jCheckBoxMtkPatchActionPerformed(evt);
             }
         });
 
@@ -351,7 +360,7 @@ public class Main extends JFrame {
         jbuttonNumber.setText("...");
         jbuttonNumber.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                 checkBugNumber();
+                jbuttonNumberActionPerformed(evt);
             }
         });
 
@@ -359,8 +368,8 @@ public class Main extends JFrame {
         jTextArea1.setRows(5);
         jScrollPane1.setViewportView(jTextArea1);
 
-        GroupLayout layout = new GroupLayout(leftPane);
-        leftPane.setLayout(layout);
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
@@ -465,7 +474,6 @@ public class Main extends JFrame {
                 .addGap(18, 18, 18)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 122, Short.MAX_VALUE))
         );
-
     }
     private String ALM_check_py = "ALM_check.py";
     private String ALM_tclpatch_py = "tclpatch.py";
@@ -962,7 +970,6 @@ public class Main extends JFrame {
     private void git_commit_and_push() {
         String comments = getComments();
         String pushUrls[] = new String[gitlist.size()]; 
-        jTextArea1.append("-----push-->"+jtextNumber.getText().trim()+","+repo_revision+"\n");
         for (int i = 0; i < gitlist.size(); i++) {
             GitProject m = gitlist.get(i);
             logd(i + ":" + m.getUpdate() + " " + m.getPath());
@@ -979,15 +986,14 @@ public class Main extends JFrame {
                 DataClass data = parseCmdOut(lines);
                 if (data.result==1) {
                 	JSONObject jobj=data.argJsonObject;
-                	pushUrls[i]=jobj.get("pushurl").toString();                	
+                	pushUrls[i]=jobj.get("pushurl").toString();
+                	
                 }else{                    
                     loge("Error: push fail! "+data.comment+"," +m.getPath());
                 }  
-                jTextArea1.append(pushUrls[i]+","+"\n");
             }
             loge("push URL:"+pushUrls[i]);
         }
-        jTextArea1.append("-----push done-------\n\n");
     }
 
     private void runThread(int run_type) {
@@ -1161,7 +1167,7 @@ public class Main extends JFrame {
             if (!(path.indexOf("device") == 0 || path.indexOf("packages/apps/B") == 0)) {
                 //continue;
             }
-            //logd(path);
+            logd(path);
             File dir=new File(Paths.get(codeRootDir, path).toString());
             if (!(dir.exists() && dir.isDirectory())){
             	//logd("dir.exists="+dir.getAbsolutePath());
@@ -1319,7 +1325,8 @@ public class Main extends JFrame {
             });
             for (int i = 0; i < gitlist.size(); i++) {
                 GitProject m = gitlist.get(i);
-                //logd(i + ":" + m.getPath());
+                logd(i + ":" + m.getPath());
+
             }
 
         } catch (Exception e) {
