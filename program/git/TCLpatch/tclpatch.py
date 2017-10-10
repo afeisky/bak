@@ -13,16 +13,16 @@ Usage: tctpatch.py <...>
 import os
 import sys
 import re
-import time
+import time,datetime
 import glob
 import commands
 from commands import *
-from time import *
-
+from time import strftime, localtime
 from xml.dom.minidom import parse
 import xml.dom.minidom
-
 import urllib
+import MySQLdb
+import webbrowser
 
 
 #    os.system("ls")  
@@ -276,11 +276,136 @@ def gitSubmitAndPush(gitpath,gitname,default_revision,comments):
 def smarttask(gitPath):
     pass
 
+def get_git_branch():
+    branch = " "
+    branch = getoutput("git branch -a | grep '\->' | sed -e 's/.*jgs.//'")
+    return branch
+
+class dotProjectDb:
+    def __init__(self):
+        self.get_db_connection()
+        self.unmgerged_importid_list = []
+
+    def get_db_connection(self):
+        #try:
+        print("%s Connect to prsm database" % datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        self.db_conn = MySQLdb.connect(host="10.92.35.20", port=3306, user="INT_PATCH", passwd="Aa123456",db="dotproject",charset="utf8") #, charset="gbk"latin1
+        self.db_cursor = self.db_conn.cursor()
+        return self.db_cursor
+        #except Exception:
+        #    print("Error: faile to connect dabatase ")
+        #    sys.exit(1)
+
+    def close_db(self):
+        print("%s Close the connection of prsm database..." % datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        if self.db_conn:
+            print('Closed DB connecion.')
+            self.db_conn.close()
+
+    def query(self, sql, one_record=True):
+        try:
+            self.db_cursor.execute(sql)
+            if one_record:
+                result = self.db_cursor.fetchone()
+            else:
+                result = self.db_cursor.fetchall()
+            return result
+        except  e:
+            print("Exception:%s\nWhile execute %s" % (e, sql))
+            return null
+
+    def get_import_name_and_id(self,DevBranchName):
+        #print("DevBranchName", DevBranchName)
+        result={}
+        try:
+            mysql = 'SELECT project_id,import_name FROM dotp_cts_branchs WHERE  branch_name="%s" group by project_id order by project_id DESC ' % DevBranchName
+            result = self.query(mysql, True)
+            print(result)
+            if result:
+                print("dint_branch= %s, import_id=%d, import_name=%s)"%(DevBranchName,result[0],result[1]))
+            else:
+                print("can not get project id from dotp_cts_branchs")
+        except Exception:
+            print("connect to prsm failed")
+        return result[0],result[1]
+
+    def get_version_and_pnumber(self,DevBranchName,patchType="ALPS"):
+        #print("DevBranchName", DevBranchName)
+        projectID = ''
+        result=''
+        #mysql='select * from dotp_mtk_import where project_id=%d and id in (SELECT import_id FROM dotp_mtk_merge WHERE merge_status=0)'%(impor_id)
+        mysql_vnum='select import_patch,vnum,pnum,eservice_id,comment from dotp_mtk_import where patch_type="%s" '\
+            ' and project_id in (SELECT project_id FROM dotp_cts_branchs WHERE  branch_name="%s" '\
+            ' group by project_id DESC) and id in (SELECT import_id FROM dotp_mtk_merge WHERE merge_patch="%s"' \
+            ' and merge_status=0) group by vnum order by vnum'
+        mysql_pnum='select import_patch,vnum,pnum,eservice_id,comment from dotp_mtk_import where patch_type="%s" '\
+            ' and project_id in (SELECT project_id FROM dotp_cts_branchs WHERE  branch_name="%s" '\
+            ' group by project_id DESC) and id in (SELECT import_id FROM dotp_mtk_merge WHERE merge_patch="%s"' \
+            ' and merge_status=0) group by pnum order by pnum'
+        import_name=''
+        vnum=[]
+        pnum = []
+        try:
+            mysql = mysql_vnum % (patchType, DevBranchName, DevBranchName)
+            print(mysql)
+            data = self.query(mysql, False)
+            print(data)
+            if data:
+                for item in data:
+                    print(item)
+                    vnum.append(item[1])
+                    import_name=item[0]
+            else:
+                print("can not get project id from dotp_cts_branchs")
+            mysql = mysql_pnum % (patchType, DevBranchName, DevBranchName)
+            print(mysql)
+            data = self.query(mysql, False)
+            print(data)
+            if data:
+                for item in data:
+                    print(item)
+                    pnum.append(item[2])
+                    import_name = item[0]
+            else:
+                print("can not get project id from dotp_cts_branchs")
+        except Exception:
+            print("connect to prsm failed")
+            return import_name, vnum, pnum
+        return import_name,vnum,pnum
+
+def getVersionAndPnumber(DevBranchName,patchType="ALPS"):
+    import_name, vnum, pnum=dotProjectDb().get_version_and_pnumber(DevBranchName,patchType)
+    print('[TCL*PATCH]')
+    if pnum:
+        strVnum=''
+        strPnum=''
+        if vnum:
+            for item in vnum:
+                if (len(strVnum)>0):
+                    strVnum+=','
+                strVnum += '"'+item+'"'
+
+        if pnum:
+            for item in pnum:
+                if (len(strPnum)>0):
+                    strPnum+=','
+                strPnum += '"'+item+'"'
+        print('{"result":1,"comment":"OK","import_name":"%s","vnum":[%s],"pnum":[%s]}'%(import_name,strVnum,strPnum))
+    else:
+        print('{"result":0,"comment":"Error: fail!"}')
+
 def test():
     print('[TCL*PATCH]')
     print('{"result":1,"comment":"OK"}')
 
+
+
+
+
+
 if __name__ == "__main__":
+    #print(getVersionAndPnumber('mickey6t-n-v1.0-fsr'))
+
     params = []
     TCL_PATH_KEY='[TCL*PATCH]'
     if len(sys.argv[1:]) == 0:
@@ -303,6 +428,12 @@ if __name__ == "__main__":
         gitSubmitAndPush(sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5])
     elif sys.argv[1]=="smarttask":
         smarttask(sys.argv[2])
+    elif sys.argv[1]=="getVersionAndPnumber":
+        getVersionAndPnumber(sys.argv[2],sys.argv[3])
+    elif sys.argv[1]=="openSmartTaskUrl":
+        url = sys.argv[2] #'http://www.baidu.com'
+        webbrowser.open(url)
+        exit(1)
     elif len(sys.argv[1:]) == 1:
         print(sys.argv[0])
         jarFileName=''

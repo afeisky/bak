@@ -20,6 +20,7 @@ import javax.swing.tree.DefaultTreeModel;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URISyntaxException;
 import java.nio.file.Paths;
 
 import java.util.ArrayList;
@@ -110,8 +111,11 @@ public class Main extends JFrame {
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTextArea jTextArea1;
     private javax.swing.JButton jbuttonNumber;
+    private java.awt.Button jbuttonSmartTaskUrl;
     private javax.swing.JComboBox<String> jcomboBoxBug;
+    private javax.swing.JComboBox<String> jcomboboxPatchNumber;
     private javax.swing.JComboBox<String> jcomboboxPatchType;
+    private javax.swing.JComboBox<String> jcomboboxPatchVersion;
     private javax.swing.JComboBox<String> jcomboboxRoot;
     private javax.swing.JTextField jtextComment;
     private javax.swing.JSpinner jtextHours;
@@ -120,7 +124,6 @@ public class Main extends JFrame {
     private javax.swing.JTextField jtextRootDetail;
     private javax.swing.JTextField jtextSolution;
     private javax.swing.JTextField jtextTest;
-    private javax.swing.JTextField jtextfieldPn;
 
     //------
     private int THREAD_GET_STATUS = 0;
@@ -207,8 +210,7 @@ public class Main extends JFrame {
 
         initLeftCompent();
         jCheckBoxMtkPatch.setEnabled(false);/////
-        jcomboboxPatchType.setEnabled(jCheckBoxMtkPatch.isSelected());
-        jtextfieldPn.setEnabled(jCheckBoxMtkPatch.isSelected());
+        setMtkPatchCom();
         leftSp.add(leftPane);
         leftSp.setViewportView(leftPane);
         leftSp.setBorder(javax.swing.BorderFactory.createCompoundBorder());
@@ -245,6 +247,9 @@ public class Main extends JFrame {
         //openALpsBtn.doClick();
         addBtn.setVisible(false);
         submitBtn.setVisible(false);
+        
+        String s=jcomboboxPatchType.getItemAt(jcomboboxPatchType.getSelectedIndex());
+        logd("====>"+s);
         if (initVar() == 1) {
             //openFolder("/disk1/a3an1");
         }
@@ -293,10 +298,12 @@ public class Main extends JFrame {
         jcomboboxRoot = new javax.swing.JComboBox<>();
         jcomboBoxBug = new javax.swing.JComboBox<>();
         jCheckBoxMtkPatch = new javax.swing.JCheckBox();
-        jtextfieldPn = new javax.swing.JTextField();
         jbuttonNumber = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         jTextArea1 = new javax.swing.JTextArea();
+        jcomboboxPatchVersion = new javax.swing.JComboBox<>();
+        jcomboboxPatchNumber = new javax.swing.JComboBox<>();
+        jbuttonSmartTaskUrl = new java.awt.Button();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -332,21 +339,25 @@ public class Main extends JFrame {
 
         jtextRootDetail.setText("");
 
-        jcomboboxPatchType.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ALPS", "MODEM_LWG", "MODEM_C2K" }));
-
-        jcomboboxRoot.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Design", "Coding", "Architecture", "Regression", "Evolution", "Unknown_Today", "Specification" }));
-
-        jcomboBoxBug.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Platform", "Android", "TCT", "3rd Party"}));
-
-        jCheckBoxMtkPatch.setText("Is MTK Patch?");
-        jCheckBoxMtkPatch.addActionListener(new java.awt.event.ActionListener() {
+        jcomboboxPatchType.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ALPS", "MOLY", "SIXTH" }));
+        jcomboboxPatchType.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-        		jcomboboxPatchType.setEnabled(jCheckBoxMtkPatch.isSelected());
-        		jtextfieldPn.setEnabled(jCheckBoxMtkPatch.isSelected());     
+                getVersionAndPnumber();
             }
         });
 
-        jtextfieldPn.setText("P1");
+        jcomboboxRoot.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Design", "Coding", "Architecture", "Regression", "Evolution", "Unknown_Today", "Specification" }));
+
+        jcomboBoxBug.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Platform", "Android", "TCT", "3rd Party" }));
+
+        jCheckBoxMtkPatch.setForeground(new java.awt.Color(0, 0, 255));
+        jCheckBoxMtkPatch.setText("Is MTK Patch?");
+        jCheckBoxMtkPatch.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+            	setMtkPatchCom();
+            	getVersionAndPnumber();
+            }
+        });
 
         jbuttonNumber.setText("...");
         jbuttonNumber.addActionListener(new java.awt.event.ActionListener() {
@@ -358,33 +369,19 @@ public class Main extends JFrame {
         jTextArea1.setColumns(20);
         jTextArea1.setRows(5);
         jScrollPane1.setViewportView(jTextArea1);
-
+        jcomboboxPatchVersion.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "v1.0.1", "v1.0.2"}));
+        jcomboboxPatchNumber.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "P1", "P2"}));
+        jbuttonSmartTaskUrl.setLabel("button1");
+        jbuttonSmartTaskUrl.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                openSmartUrl();
+            }
+        });
         GroupLayout layout = new GroupLayout(leftPane);
         leftPane.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(30, 30, 30)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(jCheckBoxMtkPatch, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jcomboboxPatchType, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(22, 22, 22)
-                                .addComponent(jtextfieldPn, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(layout.createSequentialGroup()
-                                .addGap(21, 21, 21)
-                                .addComponent(jLabel1)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(jtextNumber, javax.swing.GroupLayout.PREFERRED_SIZE, 101, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jbuttonNumber, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                    .addGroup(layout.createSequentialGroup()
-                        .addContainerGap()
-                        .addComponent(jLabel6)))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -412,8 +409,31 @@ public class Main extends JFrame {
                             .addGroup(layout.createSequentialGroup()
                                 .addGap(112, 112, 112)
                                 .addComponent(jCheckBox1)))
-                        .addGap(0, 0, Short.MAX_VALUE))))
-            .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING)
+                        .addGap(0, 0, Short.MAX_VALUE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel6)
+                            .addGroup(layout.createSequentialGroup()
+                                .addGap(14, 14, 14)
+                                .addComponent(jcomboboxPatchType, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(jcomboboxPatchVersion, javax.swing.GroupLayout.PREFERRED_SIZE, 153, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(26, 26, 26)
+                                .addComponent(jcomboboxPatchNumber, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addGroup(layout.createSequentialGroup()
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jLabel1)
+                                    .addComponent(jCheckBoxMtkPatch, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGap(5, 5, 5)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addGap(10, 10, 10)
+                                        .addComponent(jbuttonSmartTaskUrl, javax.swing.GroupLayout.PREFERRED_SIZE, 217, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addGroup(layout.createSequentialGroup()
+                                        .addComponent(jtextNumber, javax.swing.GroupLayout.PREFERRED_SIZE, 101, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(jbuttonNumber, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)))))
+                        .addContainerGap(22, Short.MAX_VALUE))))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -423,14 +443,18 @@ public class Main extends JFrame {
                     .addComponent(jtextNumber, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jbuttonNumber, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(10, 10, 10)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jCheckBoxMtkPatch)
+                    .addComponent(jbuttonSmartTaskUrl, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jcomboboxPatchType, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jtextfieldPn, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jCheckBoxMtkPatch))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                    .addComponent(jcomboboxPatchNumber, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jcomboboxPatchType, javax.swing.GroupLayout.PREFERRED_SIZE, 28, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jcomboboxPatchVersion, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(18, 18, 18)
                 .addComponent(jLabel6, javax.swing.GroupLayout.PREFERRED_SIZE, 26, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(2, 2, 2)
+                .addGap(10, 10, 10)
                 .addComponent(jtextComment, javax.swing.GroupLayout.PREFERRED_SIZE, 29, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -462,14 +486,24 @@ public class Main extends JFrame {
                     .addComponent(jtextHours, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jCheckBox1)
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 122, Short.MAX_VALUE))
+                .addGap(29, 29, 29)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 128, Short.MAX_VALUE))
         );
 
     }
     private String ALM_check_py = "ALM_check.py";
     private String ALM_tclpatch_py = "tclpatch.py";
 
+    private void setMtkPatchCom(){
+        jcomboboxPatchType.setEnabled(jCheckBoxMtkPatch.isSelected());
+        jcomboboxPatchVersion.setEnabled(jCheckBoxMtkPatch.isSelected());
+        jcomboboxPatchNumber.setEnabled(jCheckBoxMtkPatch.isSelected()); 
+        if (gitlist.size()==0){
+        	jcomboboxPatchVersion.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { ""}));
+        	jcomboboxPatchNumber.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { ""}));
+        }
+    }
+    
     private int initVar() {
         this.setTitle("TCL Patch Delivery" + " " + SoftwareVersion);
         appRootDir = System.getProperty("user.dir");
@@ -545,8 +579,7 @@ public class Main extends JFrame {
 
         String cmd = "chmod 777 "+ cmd_file_name;
         String lines = cmdLinux(cmd);
-        cmd = cmd_file_name + " test '";      
-        lines = cmdLinux(cmd);
+        lines = runCmd("test");
         DataClass data = parseCmdOut(lines);
         if (data.result==1) {
             return 1;
@@ -641,8 +674,8 @@ public class Main extends JFrame {
             logw("Error: bug number is not string.");
             return 0;
         }
-        String cmd = cmd_file_name + " bugNumberCheck '" + alm_check + "' '" + repo_revision + "' " + nubmer;
-        String lines = cmdLinux(cmd);
+        String cmd = "bugNumberCheck '" + alm_check + "' '" + repo_revision + "' " + nubmer;
+        String lines = runCmd(cmd);
         DataClass data = parseCmdOut(lines);
         if (data.result==1) {
         		isMtkPatch=(Integer)data.argJsonObject.get("is_mtk_patch");
@@ -853,8 +886,8 @@ public class Main extends JFrame {
                     if (m1.getType().equals("D")) {
                         opertor = "gitRm";
                     }
-                    String cmd = cmd_file_name + " " + opertor + " " + longpath + " '" + filename + "'";//cmd1+" & "+cmd2                
-                    String lines = cmdLinux(cmd);
+                    String cmd = opertor + " " + longpath + " '" + filename + "'";//cmd1+" & "+cmd2                
+                    String lines = runCmd(cmd);
                     logd(lines);
                     isUpdate = true;
                 }
@@ -974,8 +1007,8 @@ public class Main extends JFrame {
                 comments = comments.replaceAll("&nbsp;", "\\&nbsp;");
                 comments = comments.replaceAll(" ", "&nbsp;");
                 logd(comments);
-                String cmd = cmd_file_name + " gitSubmitAndPush " + longpath + " " + name + " " + repo_revision + " \"" + comments + "\"";//cmd1+" & "+cmd2                
-                String lines = cmdLinux(cmd);
+                String cmd = "gitSubmitAndPush " + longpath + " " + name + " " + repo_revision + " \"" + comments + "\"";//cmd1+" & "+cmd2                
+                String lines = runCmd(cmd);
                 DataClass data = parseCmdOut(lines);
                 if (data.result==1) {
                 	JSONObject jobj=data.argJsonObject;
@@ -990,6 +1023,37 @@ public class Main extends JFrame {
         jTextArea1.append("-----push done-------\n\n");
     }
 
+    private void openSmartUrl(){
+    	//http://10.92.35.20/SmartTask/index.php?m=mtkpatch&mtkstatus=0&mergepatch=mickey6t-n-v1.0-fsr&filter_mergepatch=mickey6t-n-v1.0-fsr
+    	String strSmartUrl="http://10.92.35.20/SmartTask/index.php?m=mtkpatch&mtkstatus=0&mergepatch="+repo_revision+"&filter_mergepatch="+repo_revision;    	
+    	runCmdNoback("openSmartTaskUrl "+strSmartUrl+" &");  
+    	jbuttonSmartTaskUrl.setFocusable(false);
+    }
+    private int getVersionAndPnumber(){
+    	jcomboboxPatchVersion.removeAllItems();
+    	jcomboboxPatchNumber.removeAllItems();
+    	String cmd = "getVersionAndPnumber " + repo_revision +" "+ jcomboboxPatchType.getItemAt(jcomboboxPatchType.getSelectedIndex());
+        String lines = runCmd(cmd);
+        DataClass data = parseCmdOut(lines);
+        if (data.result==1) {
+        	JSONObject jobj=data.argJsonObject;
+        	JSONArray jsonArr=jobj.getJSONArray("vnum");
+        	//JSONArray jsonArr = JSONArray.fromObject(jobj.get("vnum").toString());
+            for (int k = 0; k < jsonArr.size(); k++) {
+                jcomboboxPatchVersion.addItem((String)jsonArr.get(k));
+            }   
+            jsonArr=jobj.getJSONArray("pnum");            
+            //jsonArr = JSONArray.fromObject(jobj.get("pnum").toString());
+            for (int k = 0; k < jsonArr.size(); k++) {              
+                jcomboboxPatchNumber.addItem((String)jsonArr.get(k));
+            }
+            logd("import_name : "+(String)jobj.get("import_name"));
+        }else{                    
+            //loge("Error: push fail! "+data.comment+"," +m.getPath());
+        }  
+        
+        return 1;
+    }
     private void runThread(int run_type) {
         AfThread a = new AfThread(run_type);
         a.run();
@@ -1009,6 +1073,8 @@ public class Main extends JFrame {
                     getRepoGitStatus();
                     updateTree();
                     logd("getGitStatusThread===>Done");
+                    jCheckBoxMtkPatch.setEnabled(true);
+                    jbuttonSmartTaskUrl.setLabel("SmartTask "+repo_revision);
                     dialog.setVisible(false);
                 } catch (Exception e) {
                     logd("Error:");
@@ -1136,7 +1202,7 @@ public class Main extends JFrame {
         //String cmd2 = "git remote -v | tail -1 | awk -F' ' '{print $2}' | sed -e 's/.*://' -e 's/.git//' -e 's/\\//.?/g'";
         //String cmd = "" + cmd_file_name + " 1 '" + codeRootDir + "'";//cmd1+" & "+cmd2
         //String cmd=cmd1+" & "+cmd2;
-        //String lines = cmdLinux(cmd);
+        //String lines = runCmd(cmd);
         logd("========gitlist.size()=" + gitlist.size());
         if (gitlist.size() > 0) {
             TreePath treePath = new TreePath(tree.getModel().getRoot());
@@ -1167,7 +1233,7 @@ public class Main extends JFrame {
             	//logd("dir.exists="+dir.getAbsolutePath());
             	continue;
             }
-            String str = cmdLinux(cmd_file_name + " gitStatus " + Paths.get(codeRootDir, path).toString());
+            String str = runCmd("gitStatus " + Paths.get(codeRootDir, path).toString());
             //logd(str.indexOf(ResultKey) + "," + str);
             m.setFind(false);
             ArrayList<FileNode> sublist = new ArrayList<>();
@@ -1327,6 +1393,20 @@ public class Main extends JFrame {
         }
     }
 
+    private String runCmdNoback(String strCmd){
+    	String outline = "";
+        logw("[" + strCmd + "]");
+        try {
+            Process process = Runtime.getRuntime().exec(cmd_file_name+" "+strCmd);
+            return "";
+        } catch (Exception e) {
+            loge(e.getMessage().toLowerCase());
+            return "";
+        }
+    }
+    private String runCmd(String strCmd){
+    	return cmdLinux(cmd_file_name+" "+strCmd);
+    }
     private static String cmdLinux(String strCmd) {
         //strCmd = "chdir"; 
         String outline = "";
@@ -1395,3 +1475,4 @@ public class Main extends JFrame {
         new Main(scm_tools_dir,tclpatch_tools_dir);
     }
 }
+        		
