@@ -18,8 +18,13 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.nio.file.Paths;
 
@@ -58,6 +63,9 @@ import org.w3c.dom.*;
  */
 public class Main extends JFrame {
 
+	private boolean _DEBUG=true;
+	private boolean _DEBUG_EXT=false;
+	
     private final DefaultTreeModel defaultTreeModel;
     private DefaultMutableTreeNode root;
 
@@ -70,9 +78,11 @@ public class Main extends JFrame {
     private String appRootDir = "";
     private String codeRootDir = "";
     private String scm_tools_dir = "";
-    private String alm_check = "";
+    private String ALM_check_py = "ALM_check.py";
+    private String ALM_tclpatch_py = "tclpatch.py";
     private String cmd_file_name = "";
 
+    
     private String repo_fetch = "";
     private String repo_revision = "ALPS";
     private String repo_device = "";
@@ -129,21 +139,21 @@ public class Main extends JFrame {
     private int THREAD_GET_STATUS = 0;
     private int THREAD_GIT_ADD = 1;
     private int THREAD_GIT_COMMIT_SUBMIT = 2;
-    private String in_scm_tools_dir = "";
+    private String in_tclpatch_py_dir = "";
 
     
     private int isMtkPatch=0;
 	private String AlmDint="";
 	private String AlmTitle="";
+	
+
     
-    public Main(String _scm_tools_dir,String _tclpatch_py) {
+    public Main(String _tclpatch_py_dir) {
         //ImageIcon icon=new ImageIcon("tclpatch/icon.png");
         //this.setIconImage(icon.getImage());
         
-    	in_scm_tools_dir = _scm_tools_dir;
-    	if (_tclpatch_py.indexOf("tclpatch.py")>0){
-    		cmd_file_name = _tclpatch_py;
-    	}
+    	in_tclpatch_py_dir = _tclpatch_py_dir;
+
         setBounds(100, 200, 400, 800);
 
         JButton aboutBtn = new JButton("About");
@@ -371,7 +381,7 @@ public class Main extends JFrame {
         jScrollPane1.setViewportView(jTextArea1);
         jcomboboxPatchVersion.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "v1.0.1", "v1.0.2"}));
         jcomboboxPatchNumber.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "P1", "P2"}));
-        jbuttonSmartTaskUrl.setLabel("button1");
+        jbuttonSmartTaskUrl.setLabel("smarttask");
         jbuttonSmartTaskUrl.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 openSmartUrl();
@@ -491,8 +501,7 @@ public class Main extends JFrame {
         );
 
     }
-    private String ALM_check_py = "ALM_check.py";
-    private String ALM_tclpatch_py = "tclpatch.py";
+
 
     private void setMtkPatchCom(){
         jcomboboxPatchType.setEnabled(jCheckBoxMtkPatch.isSelected());
@@ -503,32 +512,117 @@ public class Main extends JFrame {
         	jcomboboxPatchNumber.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { ""}));
         }
     }
-    
+    private String getScmtoolDirPathName(String dirpath){
+    	
+    	chooser.setSelectedFile(new File(dirpath));
+        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        String dialogTitle="Open Scm_tools dir:";
+        chooser.setDialogTitle(dialogTitle);
+        int returnVal = chooser.showOpenDialog(Main.this);
+        if (returnVal == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            //This is where a real application would open the file.
+            logd("Opening: " + chooser.getSelectedFile().getPath());
+            return chooser.getSelectedFile().getPath();
+        }else{
+        	System.exit(1);
+        }
+        return "";
+    }
+    private boolean checkScmtools(String dirpath){
+    	File f;
+    	if (dirpath.length() > 0) {
+    		logi("[checkScmtools] "+dirpath);
+            f = new File(Paths.get(dirpath, ALM_check_py).toString());
+            logd("Warnning: not found scm_tools dir: ["+dirpath+"]!");
+            if (f.exists() && f.isFile()) {
+                scm_tools_dir = Paths.get(dirpath, "..").toString();
+                ALM_check_py=f.getAbsolutePath();
+                return true;
+            }
+            f = new File(Paths.get(dirpath, "tools",ALM_check_py).toString());
+            if (f.exists() && f.isFile()) {
+                scm_tools_dir = dirpath;
+                ALM_check_py=f.getAbsolutePath();
+                return true;
+            }            
+        }    
+    	logd("Warnning: not found scm_tools dir: ["+dirpath+"]!");
+    	return false;
+    }
+    private String settingfile = ".tclpatch.tcl";
+    private boolean readSettingFile(){    	
+    	
+    	boolean ret=false;
+    	if (settingfile.length() > 0) {
+    		 File f = new File(Paths.get(settingfile).toString());
+             String data = "";
+             if (f.isFile() && f.exists()) {
+                 InputStreamReader read;
+				try {
+					read = new InputStreamReader(new FileInputStream(f), "utf-8");
+					BufferedReader reader = new BufferedReader(read);
+	                 String line;
+	                 if ((line = reader.readLine()) != null) {
+	                	 logi("[readSettingFile] scm_tools dir: "+line);
+	                	 ret=checkScmtools(line);
+	                 }
+	                 read.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}                 
+             }
+        }
+    	return ret;
+    }    
+    private boolean saveSettingFile(String dirpath){
+    	File f;
+    	try{
+    	logd("== " + settingfile);
+    	 OutputStreamWriter outFile = new OutputStreamWriter(new FileOutputStream(settingfile),"utf-8");
+    	 outFile.write(dirpath + "\n");
+    	 outFile.close();
+    	} catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+    	}   
+    	return false;
+    }       
     private int initVar() {
         this.setTitle("TCL Patch Delivery" + " " + SoftwareVersion);
         appRootDir = System.getProperty("user.dir");
-        logw("== " + appRootDir);
-
+        logd("== " + appRootDir);
         //----
         boolean isFindScmTools = false;
         File f;
-        if (in_scm_tools_dir.length() > 0) {
-            f = new File(Paths.get(in_scm_tools_dir, ALM_check_py).toString());
-            if (f.exists() && f.isFile()) {
-                scm_tools_dir = in_scm_tools_dir;
-                isFindScmTools = true;
-            }
+        
+        if (in_tclpatch_py_dir.length()==0){
+        	cmd_file_name = Paths.get(appRootDir, ALM_tclpatch_py).toString();
+        	in_tclpatch_py_dir=appRootDir;
+        	settingfile=Paths.get(appRootDir, settingfile).toString();
+        }else{
+        	settingfile=Paths.get(in_tclpatch_py_dir, settingfile).toString();
         }
-        if (!isFindScmTools) {
-            f = new File(Paths.get(appRootDir, ALM_check_py).toString());
-            if (f.exists() && f.isFile()) {
-                scm_tools_dir = appRootDir;
-            } else {
-                scm_tools_dir = "/wcf/tools/scm_tools/tools";
-            }
+        logd("settingfile="+settingfile);
+        if (_DEBUG_EXT)	jTextArea1.append(debugLog+"\n");
+        if (!checkScmtools(in_tclpatch_py_dir)){
+        	if (!readSettingFile()){
+        		if (!readSettingFile()){
+        			String dirpath=appRootDir;
+		        	while (!checkScmtools(dirpath)){
+		        		dirpath=getScmtoolDirPathName(dirpath);
+		        	}
+	                saveSettingFile(scm_tools_dir);
+            	}
+        	}       	
         }
+        if (!new File(cmd_file_name).exists()){
+        	cmd_file_name= Paths.get(in_tclpatch_py_dir, ALM_tclpatch_py).toString();
+        }      
+
         //for test:
-        if (scm_tools_dir.equals("/wcf/tools/scm_tools/tools")) {
+        if (scm_tools_dir.equals("/wcf/tools/scm_tools")) {
             jtextNumber.setText("5361454");//5361454  ///5367854
         }
         jtextComment.setText("");
@@ -537,10 +631,6 @@ public class Main extends JFrame {
         jtextSolution.setText("fix bug");
         jtextRootDetail.setText("none");        
         //----
-        alm_check = Paths.get(scm_tools_dir, ALM_check_py).toString();
-    	if (cmd_file_name.length()==0){
-    		cmd_file_name = Paths.get(scm_tools_dir, ALM_tclpatch_py).toString();
-    	}        
         /*
         InputStream in = Main.class.getClassLoader().getResourceAsStream("/tclpatch.py");
         DataOutputStream out;
@@ -559,9 +649,13 @@ public class Main extends JFrame {
         }
          */
         //logd(is.toString());
-        logw("->" + alm_check);
+        logw("->" + ALM_check_py);
         logw("-> " + cmd_file_name);
-        f = new File(alm_check);
+        f = new File(ALM_check_py);
+        if (new File(cmd_file_name.replace(ALM_tclpatch_py,"_debug_ext")).exists()){
+        	_DEBUG_EXT=true;
+        }
+        if (_DEBUG_EXT)	jTextArea1.append(debugLog+"\n");
         if (!f.exists()) {
             JOptionPane.showMessageDialog(null, "Please run in scm_tools/tools/\n\n Not found " + ALM_check_py + "!\n\n", "Error", JOptionPane.ERROR_MESSAGE);
             System.exit(0);
@@ -591,28 +685,23 @@ public class Main extends JFrame {
         return 0;
     }
 
-    private void initTree() {
-
-    }
-
-    private void initTree1() {
-        rootNode = new CheckBoxTreeNode("root");
-        CheckBoxTreeNode node1 = new CheckBoxTreeNode("node_1");
-        CheckBoxTreeNode node1_1 = new CheckBoxTreeNode("node_1_1");
-        CheckBoxTreeNode node1_2 = new CheckBoxTreeNode("node_1_2");
-        CheckBoxTreeNode node1_3 = new CheckBoxTreeNode("node_1_3");
-        node1.add(node1_1);
-        node1.add(node1_2);
-        node1.add(node1_3);
-        CheckBoxTreeNode node2 = new CheckBoxTreeNode("node_2");
-        CheckBoxTreeNode node2_1 = new CheckBoxTreeNode("node_2_1");
-        CheckBoxTreeNode node2_2 = new CheckBoxTreeNode("node_2_2");
-        node2.add(node2_1);
-        node2.add(node2_2);
-        rootNode.add(node1);
-        rootNode.add(node2);
-
-    }
+//    private void initTree() {
+//        rootNode = new CheckBoxTreeNode("root");
+//        CheckBoxTreeNode node1 = new CheckBoxTreeNode("node_1");
+//        CheckBoxTreeNode node1_1 = new CheckBoxTreeNode("node_1_1");
+//        CheckBoxTreeNode node1_2 = new CheckBoxTreeNode("node_1_2");
+//        CheckBoxTreeNode node1_3 = new CheckBoxTreeNode("node_1_3");
+//        node1.add(node1_1);
+//        node1.add(node1_2);
+//        node1.add(node1_3);
+//        CheckBoxTreeNode node2 = new CheckBoxTreeNode("node_2");
+//        CheckBoxTreeNode node2_1 = new CheckBoxTreeNode("node_2_1");
+//        CheckBoxTreeNode node2_2 = new CheckBoxTreeNode("node_2_2");
+//        node2.add(node2_1);
+//        node2.add(node2_2);
+//        rootNode.add(node1);
+//        rootNode.add(node2);
+//    }
 
     public boolean setData(boolean isSelected, int nodeLevel, int subLevel, String gitpath, String filename) {
         for (int i = 0; i < gitlist.size(); i++) {
@@ -674,7 +763,12 @@ public class Main extends JFrame {
             logw("Error: bug number is not string.");
             return 0;
         }
-        String cmd = "bugNumberCheck '" + alm_check + "' '" + repo_revision + "' " + nubmer;
+        String cmd = "bugNumberCheck '" + ALM_check_py + "' '" + repo_revision + "' " + nubmer;
+        if (jCheckBoxMtkPatch.isSelected()){
+	    	cmd+=" "+jcomboboxPatchType.getItemAt(jcomboboxPatchType.getSelectedIndex());
+	    	cmd+=" "+jcomboboxPatchVersion.getItemAt(jcomboboxPatchVersion.getSelectedIndex());
+	    	cmd+=" "+jcomboboxPatchNumber.getItemAt(jcomboboxPatchNumber.getSelectedIndex());
+        }
         String lines = runCmd(cmd);
         DataClass data = parseCmdOut(lines);
         if (data.result==1) {
@@ -920,7 +1014,20 @@ public class Main extends JFrame {
             JOptionPane.showMessageDialog(null, "\nThe input box for typing * cannot be empty\n\n", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-
+        if (jCheckBoxMtkPatch.isSelected()){
+	    	if (jcomboboxPatchType.getItemAt(jcomboboxPatchType.getSelectedIndex()).trim().length()==0){
+	            JOptionPane.showMessageDialog(null, "\nPlease select MTK Patch Type\n\n", "Error", JOptionPane.ERROR_MESSAGE);
+	            return;
+	    	}
+	    	if (jcomboboxPatchVersion.getItemAt(jcomboboxPatchVersion.getSelectedIndex()).trim().length()==0){
+	            JOptionPane.showMessageDialog(null, "\nPlease select MTK Patch Version\n\n", "Error", JOptionPane.ERROR_MESSAGE);
+	            return;
+	    	}
+	    	if (jcomboboxPatchNumber.getItemAt(jcomboboxPatchNumber.getSelectedIndex()).trim().length()==0){
+	            JOptionPane.showMessageDialog(null, "\nPlease select MTK Patch P?\n\n", "Error", JOptionPane.ERROR_MESSAGE);
+	            return;
+	    	}
+    	}
         if (gitlist.size() > 0) {
             AfThread t = new AfThread(THREAD_GIT_COMMIT_SUBMIT);
             t.start();
@@ -992,9 +1099,23 @@ public class Main extends JFrame {
         return str;
     }
 
+    private String pushUrls[] = new String[500]; 
     private void git_commit_and_push() {
+    	for (int i = 0; i < pushUrls.length; i++) {
+    		pushUrls[i]="";
+    	}
+    	String patchtype="";
+    	String patchversion="";
+    	String patchnumber="";
+    	if (jCheckBoxMtkPatch.isSelected()){
+	    	if (jcomboboxPatchType.getItemAt(jcomboboxPatchType.getSelectedIndex()).trim().length()>0)
+	    		patchtype=jcomboboxPatchType.getItemAt(jcomboboxPatchType.getSelectedIndex()).trim();
+	    	if (jcomboboxPatchVersion.getItemAt(jcomboboxPatchVersion.getSelectedIndex()).trim().length()>0)
+	    		patchversion=jcomboboxPatchVersion.getItemAt(jcomboboxPatchVersion.getSelectedIndex()).trim();
+	    	if (jcomboboxPatchNumber.getItemAt(jcomboboxPatchNumber.getSelectedIndex()).trim().length()>0)
+	    		patchnumber=jcomboboxPatchNumber.getItemAt(jcomboboxPatchNumber.getSelectedIndex()).trim();
+    	}
         String comments = getComments();
-        String pushUrls[] = new String[gitlist.size()]; 
         jTextArea1.append("-----push-->"+jtextNumber.getText().trim()+","+repo_revision+"\n");
         for (int i = 0; i < gitlist.size(); i++) {
             GitProject m = gitlist.get(i);
@@ -1007,7 +1128,13 @@ public class Main extends JFrame {
                 comments = comments.replaceAll("&nbsp;", "\\&nbsp;");
                 comments = comments.replaceAll(" ", "&nbsp;");
                 logd(comments);
-                String cmd = "gitSubmitAndPush " + longpath + " " + name + " " + repo_revision + " \"" + comments + "\"";//cmd1+" & "+cmd2                
+                String cmd = "gitSubmitAndPush " + longpath + " " + name + " " + repo_revision + " \"" + comments + "\"";//cmd1+" & "+cmd2
+                if (jCheckBoxMtkPatch.isSelected()){
+	            	cmd+=" "+patchtype;
+	            	cmd+=" "+patchversion;
+	            	cmd+=" "+patchnumber;           	
+                }
+            	
                 String lines = runCmd(cmd);
                 DataClass data = parseCmdOut(lines);
                 if (data.result==1) {
@@ -1054,6 +1181,32 @@ public class Main extends JFrame {
         
         return 1;
     }
+
+
+    private String doFinish(){
+    	
+    	String cmd = " finish  " + repo_revision +" "+jtextNumber.getText()+" ";
+    	if (jCheckBoxMtkPatch.isSelected()){
+	    	cmd+=" "+jcomboboxPatchType.getItemAt(jcomboboxPatchType.getSelectedIndex());
+	    	cmd+=" "+jcomboboxPatchVersion.getItemAt(jcomboboxPatchVersion.getSelectedIndex());
+	    	cmd+=" "+jcomboboxPatchNumber.getItemAt(jcomboboxPatchNumber.getSelectedIndex());
+    	}
+    	cmd+=" ";
+    	for (int i = 0; i < pushUrls.length; i++) {
+    		if (pushUrls[i].length()>0)
+    			cmd+=pushUrls[i]+",";
+    	}
+        String lines = runCmd(cmd);
+        DataClass data = parseCmdOut(lines);
+        if (data.result==1) {
+            logd("import_name : "+data.comment);
+            return "";
+        }else{                    
+            return (data.comment);
+        }          
+        
+    }
+    
     private void runThread(int run_type) {
         AfThread a = new AfThread(run_type);
         a.run();
@@ -1098,8 +1251,12 @@ public class Main extends JFrame {
 
                 }
             } else if (run_type == THREAD_GIT_COMMIT_SUBMIT) {
-                git_commit_and_push();
+                git_commit_and_push();               
+                String comment=doFinish();
                 dialog.setVisible(false);
+                if (comment.length()>0){
+                	JOptionPane.showMessageDialog(null, comment + "\n\n", "Error!", JOptionPane.ERROR_MESSAGE);
+                }
             } else {
                 logd("Error: null thread.");
             }
@@ -1407,7 +1564,7 @@ public class Main extends JFrame {
     private String runCmd(String strCmd){
     	return cmdLinux(cmd_file_name+" "+strCmd);
     }
-    private static String cmdLinux(String strCmd) {
+    private String cmdLinux(String strCmd) {
         //strCmd = "chdir"; 
         String outline = "";
         logw("[" + strCmd + "]");
@@ -1427,7 +1584,7 @@ public class Main extends JFrame {
         }
     }
 
-    private static String cmdLinux(String strCmd, String[] a, String dir) throws IOException {
+    private String cmdLinux(String strCmd, String[] a, String dir) throws IOException {
         //strCmd = "chdir"; 
         logw("[" + strCmd + "]");
         Process process = Runtime.getRuntime().exec(strCmd);
@@ -1441,16 +1598,24 @@ public class Main extends JFrame {
         return outline;
     }
 
-    private static void logd(String text){
+	private String debugLog="";
+    private void logd(String text){
+    	if (_DEBUG_EXT) debugLog+=text+"\n";
         System.out.println(text);
     }
-    private static void logd(String text, int hide){
+    private void logi(String text){
+    	if (_DEBUG_EXT) debugLog+=text+"\n";
+        System.out.println(text);
+    }        
+    private void logd(String text, int hide){
         System.out.println(text);
     }    
-    private static void logw(String text){
+    private void logw(String text){
+    	if (_DEBUG_EXT) debugLog+=text+"\n";
         System.out.println(text);
     }    
-    private static void loge(String text){
+    private void loge(String text){
+    	if (_DEBUG_EXT) debugLog+=text+"\n";
         System.err.println(text);
     }    
     private void test() {
@@ -1464,15 +1629,13 @@ public class Main extends JFrame {
     public static void main(String[] args) {
         String scm_tools_dir = "";
         String tclpatch_tools_dir="";
-        System.out.println("args.length="+args.length );
+        System.out.println("args.length="+args.length);
+        
         if (args.length >0) {
             System.out.println(args[0]);
-            scm_tools_dir = args[0];
-            if (args.length >1){
-            	tclpatch_tools_dir = args[1];
-            }
+            tclpatch_tools_dir = args[0];
         }
-        new Main(scm_tools_dir,tclpatch_tools_dir);
+        new Main(tclpatch_tools_dir);
     }
 }
         		

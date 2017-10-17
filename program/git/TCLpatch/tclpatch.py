@@ -152,7 +152,7 @@ def checkBugNumber(alm_apply_app,default_revision,cmd):
         if bug_title.find("MTK patch") >= 0 or bug_title.find("ALPS")>=0 or bug_title.find("AP P") >= 0:
             print("1111")
             find=True
-        if bug_title.find("patch merge") >= 0 and bug_title.find("AP P") >= 0:
+        if bug_title.find("patch merge") >= 0 and bug_title.find(" AP P") >= 0:
             print("2222")
             find=True
         if find:
@@ -163,7 +163,7 @@ def checkBugNumber(alm_apply_app,default_revision,cmd):
             print("\033[32;1mOK! go next\033[0m")
             update_bug_number = cmd
             print('[TCL*PATCH]')
-            if ('all' not in allbranchs and (bug_dint not in allbranchs)):
+            if ('all' not in allbranchs and (bug_dint not in allbranchs) and (not (bug_dint==allbranchs))):
                 print("Error!!bug's branch(%s) not belong %s,\nplease check your bug is right!!!)"%(bug_dint,default_revision))
             else:
                 print('{"result":1,"is_mtk_patch":%d,"title":"%s","dint":"%s"}'%(g_is_mtk_patch,bug_title,bug_dint))
@@ -405,45 +405,74 @@ def test():
 
 if __name__ == "__main__":
     #print(getVersionAndPnumber('mickey6t-n-v1.0-fsr'))
-
+    print(sys.argv[0])
     params = []
     TCL_PATH_KEY='[TCL*PATCH]'
     if len(sys.argv[1:]) == 0:
-        print('java -jar ' + os.getcwd() + '/tclpatch.jar')
-        readme()
-        sys.exit(1)
-
-    if sys.argv[1] == 'test':
-        test()
-    elif sys.argv[1] == 'gitStatus':
-        gitStatus(sys.argv[2])
-    elif sys.argv[1]=="bugNumberCheck":
-        checkBugNumber(sys.argv[2],sys.argv[3],sys.argv[4])
-    elif sys.argv[1]=="gitAdd":
-        gitAdd(sys.argv[2],sys.argv[3])
-    elif sys.argv[1]=="gitRm":
-        gitRm(sys.argv[2],sys.argv[3])
-    elif sys.argv[1]=="gitSubmitAndPush":
-        print(sys.argv[5])
-        gitSubmitAndPush(sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5])
-    elif sys.argv[1]=="smarttask":
-        smarttask(sys.argv[2])
-    elif sys.argv[1]=="getVersionAndPnumber":
-        getVersionAndPnumber(sys.argv[2],sys.argv[3])
-    elif sys.argv[1]=="openSmartTaskUrl":
-        url = sys.argv[2] #'http://www.baidu.com'
-        webbrowser.open(url)
-        exit(1)
-    elif len(sys.argv[1:]) == 1:
-        print(sys.argv[0])
-        jarFileName=''
-        if (os.path.exists(sys.argv[0]) and sys.argv[0].find('tclpatch.py')>0):
-            jarFileName=sys.argv[0].replace('tclpatch.py', 'tclpatch.jar')
-        cmd='java -jar ' + jarFileName+' '+sys.argv[1]+' ' +sys.argv[0]
-        print(cmd)
-        commands.getoutput(cmd)
+        path=sys.argv[0]        
+        jarFileName=path.replace('tclpatch.py','tclpatch.jar')
+        baseDir=os.path.dirname(os.path.realpath(jarFileName))
+        if os.path.exists(jarFileName):
+            cmd='java -jar ' + jarFileName+" "+baseDir
+            print(cmd)
+            commands.getoutput(cmd)
+        else:       
+            jarFileName=os.getcwd() + '/tclpatch.jar'
+            if os.path.exists(jarFileName):
+                cmd='java -jar ' + jarFileName+" "+baseDir
+                print(cmd)
+                commands.getoutput(cmd)
+            else:
+                Readme()
+                sys.exit(1)
     else:
-        print("Error: error parameter!!!")
+        #print 'param len=%d'%len(sys.argv[1:])
+        if sys.argv[1] == 'test':
+            test()
+        elif sys.argv[1] == 'gitStatus':
+            gitStatus(sys.argv[2])
+        elif sys.argv[1]=="bugNumberCheck":
+            checkBugNumber(sys.argv[2],sys.argv[3],sys.argv[4])
+        elif sys.argv[1]=="gitAdd":
+            gitAdd(sys.argv[2],sys.argv[3])
+        elif sys.argv[1]=="gitRm":
+            gitRm(sys.argv[2],sys.argv[3])
+        elif sys.argv[1]=="gitSubmitAndPush":
+            print(sys.argv[5])
+            gitSubmitAndPush(sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5])
+        elif sys.argv[1]=="smarttask":
+            smarttask(sys.argv[2])
+        elif sys.argv[1]=="getVersionAndPnumber":
+            getVersionAndPnumber(sys.argv[2],sys.argv[3])
+        elif sys.argv[1]=="openSmartTaskUrl":
+            url = sys.argv[2] #'http://www.baidu.com'
+            webbrowser.open(url)
+            exit(1)
+        elif sys.argv[1]=="finish":
+            #/.tclpatch.py  finish  5413276 mtk6757-n-v1.0-fsr  ALPS V1  P4 http://10.92.32.45:8081/176030,http://10.92.32.45:8081/176031,
+            print(sys.argv[1]);
+            print(sys.argv[2]);
+            print(sys.argv[3]);
+            if len(sys.argv[1:]) <7:
+                print(sys.argv[4]);
+            else:
+                print(sys.argv[4]);
+                print(sys.argv[5]);            
+                print(sys.argv[6]);  
+                print(sys.argv[7]);
+            print('TCL_PATH_KEY');
+            print('{"result":1,"comment":"OK"}')
+        elif len(sys.argv[1:]) == 1:
+            print(sys.argv[0])
+            jarFileName=''
+            if (os.path.exists(sys.argv[0]) and sys.argv[0].find('tclpatch.py')>0):
+                jarFileName=sys.argv[0].replace('tclpatch.py', 'tclpatch.jar')
+            cmd='java -jar ' + jarFileName+' '+sys.argv[1]+' ' +sys.argv[0]
+            print(cmd)
+            commands.getoutput(cmd)
+        else:
+            Readme()
+            print("Error: error parameter!!!")
 
 
 # git reset HEAD^ && cd .. && cd development/   && git reset HEAD^ && cd .. && cd packages/apps/Browser2/  && git reset HEAD^ && git ../../../device
